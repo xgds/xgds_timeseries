@@ -37,5 +37,3 @@ settings object will not know about the default value!
 
 from geocamUtil.SettingsUtil import getOrCreateArray
 
-BOWER_INSTALLED_APPS = getOrCreateArray('BOWER_INSTALLED_APPS')
-BOWER_INSTALLED_APPS += []
