@@ -69,8 +69,18 @@ class TimeSeriesModelManager(models.Manager):
         super(TimeSeriesModelManager, self).__init__()
         self.channels = None
         self.channel_names = None
+        self.time_field_name = None
         self.name = 'data'
 
+    def get_time_field_name(self):
+        """
+        Get the name of the time field defined in the model
+        :return: the name of the time field
+        """
+        if not self.time_field_name:
+            self.time_field_name = self.model.get_time_field_name()
+        return self.time_field_name
+    
     def get_channel_names(self):
         """
         Get the channel names defined in the model
@@ -95,7 +105,7 @@ class TimeSeriesModelManager(models.Manager):
         """
         if not channel_names:
             channel_names = self.get_channel_names()
-        fields = ['timestamp']  # TODO maybe have the model define the field name for the timestamp
+        fields = [self.get_time_field_name()]
         fields.extend(channel_names)
         return fields
 
@@ -130,9 +140,11 @@ class TimeSeriesModelManager(models.Manager):
         if flight_ids:
             result = result.filter(flight_id__in=flight_ids)
         if start_time:
-            result = result.filter(timestamp__gte=start_time)
+            filter_dict = {'%s__gte'% self.get_time_field_name():start_time}
+            result = result.filter(**filter_dict)
         if end_time:
-            result = result.filter(timestamp__lte=end_time)
+            filter_dict = {'%s__lte'% self.get_time_field_name():start_time}
+            result = result.filter(**filter_dict)
         if filter_dict:
             result = result.filter(**filter_dict)
         return result
@@ -180,6 +192,14 @@ class TimeSeriesMixin(models.Model):
         :return: a list of the fields which are the named channels for this model
         """
         pass
+
+    @classmethod
+    def get_time_field_name(cls):
+        """
+        Override this method if the time field is not named timestamp
+        :return:
+        """
+        return 'timestamp'
 
     class Meta:
         abstract = True
