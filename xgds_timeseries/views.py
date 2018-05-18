@@ -14,7 +14,49 @@
 # specific language governing permissions and limitations under the License.
 # __END_LICENSE__
 
+import json
+from dateutil.parser import parse as dateparser
+
+
 from django.shortcuts import render_to_response
-from django.http import HttpResponseRedirect, HttpResponseForbidden, Http404
+from django.http import HttpResponseRedirect, HttpResponseForbidden, Http404, JsonResponse
 from django.template import RequestContext
 from django.utils.translation import ugettext, ugettext_lazy as _
+
+from geocamUtil.loader import getModelByName
+from geocamUtil.datetimeJsonEncoder import DatetimeJsonEncoder
+
+
+def get_data(request):
+    """
+    Returns a JsonResponse of the data described by the filters in the POST dictionary
+    :param request: the request
+    :request.POST:
+    :return:
+    """
+    if request.method == 'POST':
+        model_name = request.POST.get('modelName', None)
+        # model name is required
+        model = getModelByName(model_name)
+        channels = request.POST.getlist('channels', None)
+        flight_ids = request.POST.getlist('flight_ids', None)
+        start_time_string = request.POST.get('start_time', None)
+        start_time = None
+        if start_time_string:
+            start_time = dateparser(start_time_string)
+        end_time_string = request.POST.get('end_time', None)
+        end_time = None
+        if end_time_string:
+            end_time = dateparser(end_time_string)
+
+        filter_json = request.POST.get('filter', None)
+        filter_dict = None
+        if filter_json:
+            filter_dict = json.loads(filter_json)
+
+        values = model.objects.get_values(start_time, end_time, flight_ids, filter_dict, channels)
+
+        return JsonResponse(list(values), encoder=DatetimeJsonEncoder)
+
+
+
