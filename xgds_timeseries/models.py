@@ -181,7 +181,7 @@ class TimeSeriesModelManager(models.Manager):
         return result
 
 
-class TimeSeriesMixin(models.Model):
+class TimeSeriesModel(models.Model):
 
     objects = TimeSeriesModelManager()
 
