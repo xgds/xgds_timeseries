@@ -143,7 +143,7 @@ class TimeSeriesModelManager(models.Manager):
         """
         return self.get_data(start_time, end_time, flight_ids, filter_dict).values(*self.get_fields(channel_names))
 
-    def get_bounds(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None, channel_names=None):
+    def get_min_max(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None, channel_names=None):
         """
         This HITS THE DATABASE to get a dictionary of min/max values for the channels.  Timestamp is always provided.
         :param start_time: The start time, timezone aware
@@ -151,7 +151,7 @@ class TimeSeriesModelManager(models.Manager):
         :param flight_ids: the list of flight ids
         :param filter_dict: A dictionary of other filter terms
         :param channel_names: list of names of channels
-        :return: A dictionary
+        :return @dictionary: A dictionary
         """
         filtered_data = self.get_data(start_time, end_time, flight_ids, filter_dict)
         fields = self.get_fields(channel_names)
