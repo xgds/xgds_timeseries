@@ -19,34 +19,22 @@ from django.db import models
 from django.db.models import Min, Max
 
 
-class Channel(object):
+class ChannelDescription(object):
     """
-    A channel represents a single value over time
-    name
-    units
-    global min
-    global max
-    get data function
-    label
+    A Channel Description is used by a Time Series Model to describe each channel.
     """
-    def __init__(self, name, units=None, global_min=None, global_max=None, label=None):
-        self.name = name
+
+    def __init__(self, label, units=None, global_min=None, global_max=None):
+        """
+        :param label: The label will be shown with plots in the UI
+        :param units: The units for the channel, ie meter
+        :param global_min: The global minimum
+        :param global_max: The global maximum
+        """
+        self.label = label
         self.units = units
         self.global_min = global_min
         self.global_max = global_max
-        self.label = label
-
-    def get_data(self, start_time, end_time, filter):
-        pass
-
-    def get_data_bounds(self, filter):
-        """
-        Returns the min and max value of the data collected defined by the filter for the given channels
-        :param filter: The filter, such as the flight id or anything else
-        :param filter: The channels, such as the flight id or anything else
-        :return: a dictionary with {min: value, max: value}
-        """
-        pass
 
 
 class TimeSeriesModelManager(models.Manager):
@@ -89,13 +77,6 @@ class TimeSeriesModelManager(models.Manager):
         if not self.channel_names:
             self.channel_names = self.model.get_channel_names()
         return self.channel_names
-
-    def get_channels(self):
-        if not self.channels:
-            self.channels = []
-            for channel_name in self.get_channel_names():
-                self.channels.append(Channel(channel_name, label=channel_name.capitalize()))
-        return self.channels
 
     def get_fields(self, channel_names=None):
         """
@@ -184,6 +165,29 @@ class TimeSeriesModelManager(models.Manager):
 class TimeSeriesModel(models.Model):
 
     objects = TimeSeriesModelManager()
+    channel_descriptions = {}
+
+    @classmethod
+    def get_channel_description(cls, channel_name):
+        """
+        You must override this method
+        :param channel_name: The name of the channel for which you want a description
+        :return: a dictionary of useful things
+        """
+        try:
+            return cls.channel_descriptions[channel_name]
+        except:
+            return None
+
+    @classmethod
+    def get_channel_descriptions(cls):
+        """
+        You must override this method
+        :param channel_name: The name of the channel for which you want a description
+        :return: a dictionary of useful things
+        """
+        return cls.channel_descriptions
+
 
     @classmethod
     def get_channel_names(cls):
