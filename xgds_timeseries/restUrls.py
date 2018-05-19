@@ -18,3 +18,8 @@ from django.conf.urls import *
 
 from django.views.generic.base import TemplateView
 from xgds_timeseries import views
+
+urlpatterns = [url(r'^classes/json', views.get_time_series_classes, {}, 'timeseries_classes_json'),
+               url(r'^min_max/json', views.get_min_max_json, {}, 'timeseries_min_max_json'),
+               url(r'^values/json', views.get_values_json, {}, 'timeseries_values_json'),
+              ]

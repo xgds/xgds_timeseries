@@ -18,23 +18,28 @@
 from django.db import models
 from django.db.models import Min, Max
 
+# TODO support number of samples so that we can express how many samples, or what interval of data we are looking for
+# to limit the number of results we get
+
 
 class ChannelDescription(object):
     """
     A Channel Description is used by a Time Series Model to describe each channel.
     """
 
-    def __init__(self, label, units=None, global_min=None, global_max=None):
+    def __init__(self, label, units=None, global_min=None, global_max=None, interval=None):
         """
         :param label: The label will be shown with plots in the UI
         :param units: The units for the channel, ie meter
         :param global_min: The global minimum
         :param global_max: The global maximum
+        :param interval: The expected time interval between samples in seconds
         """
         self.label = label
         self.units = units
         self.global_min = global_min
         self.global_max = global_max
+        self.interval = interval
 
 
 class TimeSeriesModelManager(models.Manager):
