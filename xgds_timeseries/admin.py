@@ -15,3 +15,6 @@
 #__END_LICENSE__
 
 from django.contrib import admin
+from xgds_timeseries.models import *
+
+admin.site.register(TimeSeriesExample)

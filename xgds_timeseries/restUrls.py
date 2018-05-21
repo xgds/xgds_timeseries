@@ -14,12 +14,12 @@
 # specific language governing permissions and limitations under the License.
 #__END_LICENSE__
 
-from django.conf.urls import *
+from django.conf.urls import url
 
-from django.views.generic.base import TemplateView
-from xgds_timeseries import views
+import xgds_timeseries.views as views
 
-urlpatterns = [url(r'^classes/json', views.get_time_series_classes, {}, 'timeseries_classes_json'),
-               url(r'^min_max/json', views.get_min_max_json, {}, 'timeseries_min_max_json'),
-               url(r'^values/json', views.get_values_json, {}, 'timeseries_values_json'),
-              ]
+urlpatterns = [url(r'^classes/json$', views.get_time_series_classes_json, {}, 'timeseries_classes_json'),
+               url(r'^min_max/json$', views.get_min_max_json, {}, 'timeseries_min_max_json'),
+               url(r'^values/json$', views.get_values_json, {}, 'timeseries_values_json'),
+               url(r'^channel_descriptions/json$', views.get_channel_descriptions_json, {}, 'timeseries_channel_descriptions_json'),
+               ]

@@ -1,0 +1,15 @@
+# This is an example Time Series model for testing
+name: TimeSeriesExample
+class: xgds_timeseries.TimeSeriesExample
+superclass: xgds_timeseries.TimeSeriesModel
+extension: txt
+delimiter: " "
+flight_required: true
+fields:
+  timestamp:
+    type: datetime
+  value:
+    type : float
+    units : meters
+    min : 0
+    max : 100

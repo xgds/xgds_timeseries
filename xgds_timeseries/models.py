@@ -14,7 +14,6 @@
 # specific language governing permissions and limitations under the License.
 # __END_LICENSE__
 
-
 from django.db import models
 from django.db.models import Min, Max
 
@@ -156,14 +155,16 @@ class TimeSeriesModelManager(models.Manager):
         :param flight_ids: the list of flight ids
         :param filter_dict: A dictionary of other filter terms
         :param channel_names: list of names of channels
-        :return @dictionary: A dictionary
+        :return @dictionary: A dictionary, or None
         """
         filtered_data = self.get_data(start_time, end_time, flight_ids, filter_dict)
+        if not filtered_data.exists():
+            return None
         fields = self.get_fields(channel_names)
         result = {}
         for field in fields:
-            result[field] = {'min': filtered_data.aggregate(Min(field)),
-                             'max': filtered_data.aggregate(Max(field))}
+            result[field] = {'min': filtered_data.aggregate(Min(field))['%s__min' % field],
+                             'max': filtered_data.aggregate(Max(field))['%s__max' % field]}
         return result
 
 
@@ -212,3 +213,25 @@ class TimeSeriesModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+class TimeSeriesExample(TimeSeriesModel):
+    """
+    This example model is for testing purposes
+    This is an auto-generated Django model created from a
+    YAML specifications using ./apps/xgds_core/importer/yamlModelBuilder.py
+    and YAML file ./apps/xgds_timeseries/importer/TimeSeries_Example.yaml
+    """
+
+    timestamp = models.DateTimeField(db_index=True, null=False, blank=False)
+    value = models.FloatField(null=True, blank=True)
+    flight = models.ForeignKey('xgds_core.Flight', on_delete=models.SET_NULL, blank=True, null=True)
+
+    channel_descriptions = {
+                            'value': ChannelDescription('Value', units='meters', global_min=0.000000, global_max=100.000000),
+                            }
+
+    @classmethod
+    def get_channel_names(cls):
+        return ['value', ]
+

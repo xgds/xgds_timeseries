@@ -9,3 +9,4 @@
 /static/css/*.r*.css
 /xgds_timeseries/build
 TEST
+/xgds_timeseries/migrations
