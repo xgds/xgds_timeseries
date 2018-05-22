@@ -30,7 +30,7 @@ class xgds_timeseriesTest(TestCase):
     fixtures = ['timeseries_test_fixture.json']
 
     post_dict = {'model_name': 'xgds_timeseries.TimeSeriesExample',
-                 'channel_names': ['value'],
+                 'channel_names': ['temperature', 'pressure'],
                  'flight_ids': [22],
                  # 'start_time': '2017-11-10T23:15:33.487643Z',
                  # 'end_time': '2017-11-10T23:26:59.594971Z',
@@ -79,27 +79,27 @@ class xgds_timeseriesTest(TestCase):
         """
         response = self.client.post(reverse('timeseries_channel_descriptions_json'), {'model_name':'xgds_timeseries.TimeSeriesExample'})
         content = self.is_good_json_response(response)
-        self.assertIn('value', content)
-        value = content['value']
-        self.assertEqual(value['units'], 'meters')
-        self.assertEqual(value['global_max'], 100)
-        self.assertEqual(value['global_min'], 0)
-        self.assertEqual(value['label'], 'Value')
+        self.assertIn('temperature', content)
+        temperature = content['temperature']
+        self.assertEqual(temperature['units'], 'C')
+        self.assertEqual(temperature['global_max'], 45)
+        self.assertEqual(temperature['global_min'], 0)
+        self.assertEqual(temperature['label'], 'Temp')
 
-    def test_get_value_channel_descriptions(self):
+    def test_get_humidity_channel_descriptions(self):
         """
-        Test getting all the channel descriptions for the example, value only, should contain value
+        Test getting the channel descriptions for the example, humidity only, should contain humidity
         """
-        response = self.client.post(reverse('timeseries_channel_descriptions_json'), {'model_name':'xgds_timeseries.TimeSeriesExample', 'channel_name':'value'})
+        response = self.client.post(reverse('timeseries_channel_descriptions_json'), {'model_name':'xgds_timeseries.TimeSeriesExample', 'channel_name':'humidity'})
         content = self.is_good_json_response(response)
-        self.assertIn('value', content)
-        value = content['value']
-        self.assertEqual(value['units'], 'meters')
-        self.assertEqual(value['global_max'], 100)
-        self.assertEqual(value['global_min'], 0)
-        self.assertEqual(value['label'], 'Value')
+        self.assertIn('humidity', content)
+        humidity = content['humidity']
+        self.assertIsNone(humidity['units'])
+        self.assertEqual(humidity['global_max'], 100)
+        self.assertEqual(humidity['global_min'], 0)
+        self.assertEqual(humidity['label'], 'Humidity')
 
-    def test_get_value_channel_descriptions_bad_channel_name(self):
+    def test_get_channel_descriptions_bad_channel_name(self):
         """
         Test getting all the channel descriptions for the example, pass bad channel name,
         should be 204.
@@ -119,20 +119,27 @@ class xgds_timeseriesTest(TestCase):
 
     def test_get_min_max(self):
         """
-        Test getting the min and max values with a good filter
+        Test getting the min and max values with a good filter, including temperature and pressure
         """
         response = self.client.post(reverse('timeseries_min_max_json'), self.post_dict)
         content = self.is_good_json_response(response)
 
         self.assertIn('timestamp', content)
         timestamp_dict = content['timestamp']
-        self.assertEqual(timestamp_dict["max"], "2017-11-10T23:26:59.594000+00:00")
-        self.assertEqual(timestamp_dict["min"], "2017-11-10T23:15:33.487000+00:00")
+        self.assertEqual(timestamp_dict["max"], "2017-11-10T23:17:26.663000+00:00")
+        self.assertEqual(timestamp_dict["min"], "2017-11-10T23:15:01.284000+00:00")
 
-        self.assertIn('value', content)
-        value_dict = content['value']
-        self.assertEqual(value_dict["max"], 4.1)
-        self.assertEqual(value_dict["min"], 1.05)
+        self.assertIn('temperature', content)
+        temp_dict = content['temperature']
+        self.assertEqual(temp_dict["max"], 8.15)
+        self.assertEqual(temp_dict["min"], 8.12)
+
+        self.assertIn('pressure', content)
+        pressure_dict = content['pressure']
+        self.assertEqual(pressure_dict["max"], 3.98)
+        self.assertEqual(pressure_dict["min"], 1.26)
+
+        self.assertNotIn('humidity', content)
 
     def test_get_min_max_none(self):
         """
@@ -150,11 +157,11 @@ class xgds_timeseriesTest(TestCase):
         response = self.client.post(reverse('timeseries_values_json'), self.post_dict)
         content = self.is_good_json_response(response, is_list=True)
         self.assertIsNotNone(content)
-        self.assertEqual(len(content), 687)
+        self.assertEqual(len(content), 100)
         first = content[0]
-        self.assertEqual(first['timestamp'], '2017-11-10T23:15:33.487000+00:00')
-        self.assertEqual(first['value'], 1.2)
-
+        self.assertEqual(first['timestamp'], '2017-11-10T23:15:01.284000+00:00')
+        self.assertEqual(first['temperature'], 8.13)
+        self.assertEqual(first['pressure'], 3.98)
 
     def test_get_values_filter(self):
         """
@@ -162,11 +169,22 @@ class xgds_timeseriesTest(TestCase):
         """
         response = self.client.post(reverse('timeseries_values_json'),
                                     {'model_name': 'xgds_timeseries.TimeSeriesExample',
-                                     'filter': '{"value__gte":1.2, "value__lte":1.8}' })
+                                     'filter': '{"humidity__gte":50, "humidity__lte":99}' })
         content = self.is_good_json_response(response, is_list=True)
         self.assertIsNotNone(content)
-        self.assertEqual(len(content), 679)
+        self.assertEqual(len(content), 2)
 
+        first = content[0]
+        second = content[1]
+        self.assertEqual(first['timestamp'], '2017-11-10T23:15:19.062000+00:00')
+        self.assertEqual(first['temperature'], 8.13)
+        self.assertEqual(first['pressure'], 3.98)
+        self.assertEqual(first['humidity'], 99)
+
+        self.assertEqual(second['timestamp'], '2017-11-10T23:15:27.758000+00:00')
+        self.assertEqual(second['temperature'], 8.14)
+        self.assertEqual(second['pressure'], 3.98)
+        self.assertEqual(second['humidity'], 99)
 
     def test_get_values_none(self):
         """
@@ -175,7 +193,7 @@ class xgds_timeseriesTest(TestCase):
         """
         response = self.client.post(reverse('timeseries_values_json'),
                                             {'model_name': 'xgds_timeseries.TimeSeriesExample',
-                                            'filter': '{"value__gte":300}'})
+                                            'filter': '{"temperature__gte":300}'})
         self.assertEqual(response.status_code, 204)
 
     def test_get_values_error(self):

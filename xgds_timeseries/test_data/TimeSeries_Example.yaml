@@ -2,14 +2,21 @@
 name: TimeSeriesExample
 class: xgds_timeseries.TimeSeriesExample
 superclass: xgds_timeseries.TimeSeriesModel
-extension: txt
-delimiter: " "
+extension: tsv
+delimiter: "\t"
 flight_required: true
 fields:
   timestamp:
     type: datetime
-  value:
+  temperature:
+    type: float
+    min: 0
+    max: 45
+    units: C
+    label: Temp
+  pressure:
     type : float
-    units : meters
+  humidity:
+    type : float
     min : 0
     max : 100
