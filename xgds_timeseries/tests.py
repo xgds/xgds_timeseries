@@ -150,6 +150,13 @@ class xgds_timeseriesTest(TestCase):
                                      'flight_ids': [1, 2, 3]})
         self.assertEqual(response.status_code, 204)
 
+    def test_get_min_max_no_post(self):
+        """
+        Test getting the min and max values with a get
+        """
+        response = self.client.get(reverse('timeseries_min_max_json'))
+        self.assertEqual(response.status_code, 403)
+
     def test_get_values_all(self):
         """
         Test getting all the values
@@ -200,5 +207,17 @@ class xgds_timeseriesTest(TestCase):
         response = self.client.post(reverse('timeseries_values_json'),
                                     {'model_name': 'garbage'})
         self.assertEqual(response.status_code, 405)
+
+    def test_get_values_no_post(self):
+        """
+        Test getting the min and max values with a get
+        """
+        response = self.client.get(reverse('timeseries_values_json'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_get_version(self):
+        from xgds_timeseries import get_version
+        result = get_version()
+        self.assertEqual(result, 0.1)
 
 
