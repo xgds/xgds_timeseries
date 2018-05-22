@@ -17,7 +17,7 @@
 import json
 from dateutil.parser import parse as dateparser
 
-from django.http import HttpResponseForbidden, Http404, JsonResponse
+from django.http import HttpResponseForbidden, Http404, JsonResponse, HttpResponseNotAllowed
 
 from geocamUtil.loader import getModelByName
 from geocamUtil.datetimeJsonEncoder import DatetimeJsonEncoder
@@ -194,11 +194,20 @@ def get_channel_descriptions_json(request):
     :return: JsonResponse with the result.
     """
     if request.method == 'POST':
-        model_name = request.POST.get('model_name', None)
-        # model name is required
-        if model_name:
-            model = getModelByName(model_name)
-            if model:
-                channel_name = request.POST.get('channel_name', None)
-                return JsonResponse(get_channel_descriptions(model, channel_name))
+        try:
+            model_name = request.POST.get('model_name', None)
+            # model name is required
+            if model_name:
+                model = getModelByName(model_name)
+                if model:
+                    channel_name = request.POST.get('channel_name', None)
+                    result = get_channel_descriptions(model, channel_name)
+                    if result:
+                        for key, value in result.iteritems():
+                            if not isinstance(value, dict):
+                                result[key] = value.__dict__
+                        return JsonResponse(result)
+                return JsonResponse({'error': 'bad parameters'}, status=204)
+        except Exception as e:
+            return HttpResponseNotAllowed(e.message)
     return HttpResponseForbidden()

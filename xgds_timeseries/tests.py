@@ -13,7 +13,6 @@
 # CONDITIONS OF ANY KIND, either express or implied. See the License for the
 # specific language governing permissions and limitations under the License.
 # __END_LICENSE__
-
 import json
 from django.test import TestCase
 from django.core.urlresolvers import reverse
@@ -47,7 +46,6 @@ class xgds_timeseriesTest(TestCase):
         self.assertIsNotNone(result)
         self.assertIsInstance(result, list)
         self.assertIn('xgds_timeseries.TimeSeriesExample', result)
-        pass
 
     def test_get_timeseries_classes_json(self):
         """
@@ -60,30 +58,76 @@ class xgds_timeseriesTest(TestCase):
         content = response.content
         self.assertIsNotNone(content)
         self.assertIn('xgds_timeseries.TimeSeriesExample', content)
-        pass
 
-    def test_unravel_post(self):
+    def is_good_json_response(self, response):
         """
-        Test unraveling the post data into a PostData class
+        Test that a json response is good, and return its content as a dict
+        :param response:
         :return:
         """
-        # post_data = views.unravel_post(self.post_dict)
-        # self.assertIsNotNone(post_data)
-        # self.assertEqual(post_data.model, TimeSeriesExample)
-        # self.assertEqual(post_data.channel_names, self.post_dict['channel_names'])
-        # self.assertEqual(post_data.start_time, dateparser(self.post_dict['start_time']))
-        # self.assertEqual(post_data.end_time, dateparser(self.post_dict['end_time']))
-        # self.assertEqual(post_data.filter_dict, {'value__gte':8.12})
-        pass
-
-    def test_get_min_max(self):
-        response = self.client.post(reverse('timeseries_min_max_json'), self.post_dict)
         self.assertEqual(response.status_code, 200)
         self.assertIsInstance(response, JsonResponse)
         string_content = response.content
         self.assertIsNotNone(string_content)
         content = json.loads(string_content)
         self.assertIsInstance(content, dict)
+        return content
+
+    def test_get_all_channel_descriptions(self):
+        """
+        Test getting all the channel descriptions for the example, should contain value
+        :return:
+        """
+        response = self.client.post(reverse('timeseries_channel_descriptions_json'), {'model_name':'xgds_timeseries.TimeSeriesExample'})
+        content = self.is_good_json_response(response)
+        self.assertIn('value', content)
+        value = content['value']
+        self.assertEqual(value['units'], 'meters')
+        self.assertEqual(value['global_max'], 100)
+        self.assertEqual(value['global_min'], 0)
+        self.assertEqual(value['label'], 'Value')
+
+    def test_get_value_channel_descriptions(self):
+        """
+        Test getting all the channel descriptions for the example, value only, should contain value
+        :return:
+        """
+        response = self.client.post(reverse('timeseries_channel_descriptions_json'), {'model_name':'xgds_timeseries.TimeSeriesExample', 'channel_name':'value'})
+        content = self.is_good_json_response(response)
+        self.assertIn('value', content)
+        value = content['value']
+        self.assertEqual(value['units'], 'meters')
+        self.assertEqual(value['global_max'], 100)
+        self.assertEqual(value['global_min'], 0)
+        self.assertEqual(value['label'], 'Value')
+
+    def test_get_value_channel_descriptions_bad_channel_name(self):
+        """
+        Test getting all the channel descriptions for the example, pass bad channel name,
+        should be 204.
+        :return:
+        """
+        response = self.client.post(reverse('timeseries_channel_descriptions_json'),
+                                    {'model_name': 'xgds_timeseries.TimeSeriesExample', 'channel_name': 'error'})
+        self.assertEqual(response.status_code, 204)
+
+    def test_get_channel_descriptions_bad_model(self):
+        """
+        Test getting all the channel descriptions for the example, pass bad channel name,
+        should be 405.
+        :return:
+        """
+        response = self.client.post(reverse('timeseries_channel_descriptions_json'),
+                                    {'model_name': 'bad.error'})
+        self.assertEqual(response.status_code, 405)
+
+    def test_get_min_max(self):
+        """
+        Test getting the min and max values with a good filter
+        :return:
+        """
+        response = self.client.post(reverse('timeseries_min_max_json'), self.post_dict)
+        content = self.is_good_json_response(response)
 
         self.assertIn('timestamp', content)
         timestamp_dict = content['timestamp']
@@ -94,12 +138,14 @@ class xgds_timeseriesTest(TestCase):
         value_dict = content['value']
         self.assertEqual(value_dict["max"], 4.1)
         self.assertEqual(value_dict["min"], 1.05)
-        pass
 
     def test_get_min_max_none(self):
+        """
+        Test getting the min and max values with a bad filter
+        :return:
+        """
         response = self.client.post(reverse('timeseries_min_max_json'),
                                     {'model_name': 'xgds_timeseries.TimeSeriesExample',
                                      'flight_ids': [1, 2, 3]})
         self.assertEqual(response.status_code, 204)
-        pass
 

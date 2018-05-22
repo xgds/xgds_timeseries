@@ -181,7 +181,7 @@ class TimeSeriesModel(models.Model):
         :return: a dictionary of useful things
         """
         try:
-            return cls.channel_descriptions[channel_name]
+            return {channel_name: cls.channel_descriptions[channel_name]}
         except:
             return None
 
