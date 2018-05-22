@@ -40,7 +40,6 @@ class xgds_timeseriesTest(TestCase):
     def test_get_timeseries_classes(self):
         """
         Test getting the timeseries classes including the example one
-        :return:
         """
         result = views.get_time_series_classes(skip_example=False)
         self.assertIsNotNone(result)
@@ -50,7 +49,6 @@ class xgds_timeseriesTest(TestCase):
     def test_get_timeseries_classes_json(self):
         """
         Test getting the timeseries classes as a json response
-        :return:
         """
         response = self.client.get(reverse('timeseries_classes_json'), kwargs={'skip_example':False})
         self.assertEqual(response.status_code, 200)
@@ -59,24 +57,25 @@ class xgds_timeseriesTest(TestCase):
         self.assertIsNotNone(content)
         self.assertIn('xgds_timeseries.TimeSeriesExample', content)
 
-    def is_good_json_response(self, response):
+    def is_good_json_response(self, response, is_list=False):
         """
         Test that a json response is good, and return its content as a dict
         :param response:
-        :return:
         """
         self.assertEqual(response.status_code, 200)
         self.assertIsInstance(response, JsonResponse)
         string_content = response.content
         self.assertIsNotNone(string_content)
         content = json.loads(string_content)
-        self.assertIsInstance(content, dict)
+        if not is_list:
+            self.assertIsInstance(content, dict)
+        else:
+            self.assertIsInstance(content, list)
         return content
 
     def test_get_all_channel_descriptions(self):
         """
         Test getting all the channel descriptions for the example, should contain value
-        :return:
         """
         response = self.client.post(reverse('timeseries_channel_descriptions_json'), {'model_name':'xgds_timeseries.TimeSeriesExample'})
         content = self.is_good_json_response(response)
@@ -90,7 +89,6 @@ class xgds_timeseriesTest(TestCase):
     def test_get_value_channel_descriptions(self):
         """
         Test getting all the channel descriptions for the example, value only, should contain value
-        :return:
         """
         response = self.client.post(reverse('timeseries_channel_descriptions_json'), {'model_name':'xgds_timeseries.TimeSeriesExample', 'channel_name':'value'})
         content = self.is_good_json_response(response)
@@ -105,7 +103,6 @@ class xgds_timeseriesTest(TestCase):
         """
         Test getting all the channel descriptions for the example, pass bad channel name,
         should be 204.
-        :return:
         """
         response = self.client.post(reverse('timeseries_channel_descriptions_json'),
                                     {'model_name': 'xgds_timeseries.TimeSeriesExample', 'channel_name': 'error'})
@@ -115,7 +112,6 @@ class xgds_timeseriesTest(TestCase):
         """
         Test getting all the channel descriptions for the example, pass bad channel name,
         should be 405.
-        :return:
         """
         response = self.client.post(reverse('timeseries_channel_descriptions_json'),
                                     {'model_name': 'bad.error'})
@@ -124,7 +120,6 @@ class xgds_timeseriesTest(TestCase):
     def test_get_min_max(self):
         """
         Test getting the min and max values with a good filter
-        :return:
         """
         response = self.client.post(reverse('timeseries_min_max_json'), self.post_dict)
         content = self.is_good_json_response(response)
@@ -142,10 +137,50 @@ class xgds_timeseriesTest(TestCase):
     def test_get_min_max_none(self):
         """
         Test getting the min and max values with a bad filter
-        :return:
         """
         response = self.client.post(reverse('timeseries_min_max_json'),
                                     {'model_name': 'xgds_timeseries.TimeSeriesExample',
                                      'flight_ids': [1, 2, 3]})
         self.assertEqual(response.status_code, 204)
+
+    def test_get_values_all(self):
+        """
+        Test getting all the values
+        """
+        response = self.client.post(reverse('timeseries_values_json'), self.post_dict)
+        content = self.is_good_json_response(response, is_list=True)
+        self.assertIsNotNone(content)
+        self.assertEqual(len(content), 687)
+        first = content[0]
+        self.assertEqual(first['timestamp'], '2017-11-10T23:15:33.487000+00:00')
+        self.assertEqual(first['value'], 1.2)
+
+
+    def test_get_values_filter(self):
+        """
+        Test getting filtered values
+        """
+        response = self.client.post(reverse('timeseries_values_json'),
+                                    {'model_name': 'xgds_timeseries.TimeSeriesExample',
+                                     'filter': '{"value__gte":1.2, "value__lte":1.8}' })
+        content = self.is_good_json_response(response, is_list=True)
+        self.assertIsNotNone(content)
+        self.assertEqual(len(content), 679)
+
+
+    def test_get_values_none(self):
+        """
+        Test get no values because bad query
+        :return:
+        """
+        response = self.client.post(reverse('timeseries_values_json'),
+                                            {'model_name': 'xgds_timeseries.TimeSeriesExample',
+                                            'filter': '{"value__gte":300}'})
+        self.assertEqual(response.status_code, 204)
+
+    def test_get_values_error(self):
+        response = self.client.post(reverse('timeseries_values_json'),
+                                    {'model_name': 'garbage'})
+        self.assertEqual(response.status_code, 405)
+
 

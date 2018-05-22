@@ -162,13 +162,19 @@ def get_values_json(request):
     :return: a JsonResponse with a list of dicts with all the results
     """
     if request.method == 'POST':
-        post_values = unravel_post(request.POST)
-        if not post_values.model:
-            return Http404('Model is required')
+        try:
+            post_values = unravel_post(request.POST)
+            if not post_values.model:
+                return Http404('Model is required')
 
-        values = get_values_list(post_values.model, post_values.channel_names, post_values.flight_ids,
-                                 post_values.start_time, post_values.end_time, post_values.filter_dict)
-        return JsonResponse(values, encoder=DatetimeJsonEncoder)
+            values = get_values_list(post_values.model, post_values.channel_names, post_values.flight_ids,
+                                     post_values.start_time, post_values.end_time, post_values.filter_dict)
+            if values:
+                return JsonResponse(values, encoder=DatetimeJsonEncoder, safe=False)
+            else:
+                return JsonResponse({'status': 'error', 'message': 'No values were found.'}, status=204)
+        except Exception as e:
+            return HttpResponseNotAllowed(e.message)
     return HttpResponseForbidden()
 
 
