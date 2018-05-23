@@ -21,5 +21,6 @@ import xgds_timeseries.views as views
 urlpatterns = [url(r'^classes/json$', views.get_time_series_classes_json, {}, 'timeseries_classes_json'),
                url(r'^min_max/json$', views.get_min_max_json, {}, 'timeseries_min_max_json'),
                url(r'^values/json$', views.get_values_json, {}, 'timeseries_values_json'),
+               url(r'^values/flight/json$', views.get_flight_values_json, {}, 'timeseries_flight_values_json'),
                url(r'^channel_descriptions/json$', views.get_channel_descriptions_json, {}, 'timeseries_channel_descriptions_json'),
                ]

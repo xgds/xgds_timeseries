@@ -13,7 +13,9 @@
 # CONDITIONS OF ANY KIND, either express or implied. See the License for the
 # specific language governing permissions and limitations under the License.
 # __END_LICENSE__
+
 import json
+from django.db import models
 from django.test import TestCase
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseForbidden, Http404, JsonResponse
@@ -162,9 +164,6 @@ class xgds_timeseriesTest(TestCase):
 
         self.assertIn('timestamp', content)
         timestamp_dict = content['timestamp']
-        print "MIN TIME %s" % timestamp_dict["min"]
-        print "MAX TIME %s" % timestamp_dict["max"]
-
         self.assertEqual(timestamp_dict["max"], "2017-11-10T23:16:29.528000+00:00")
         self.assertEqual(timestamp_dict["min"], "2017-11-10T23:16:17.673000+00:00")
 
@@ -191,6 +190,14 @@ class xgds_timeseriesTest(TestCase):
                                     {'model_name': 'xgds_timeseries.TimeSeriesExample',
                                      'flight_ids': [1, 2, 3]})
         self.assertEqual(response.status_code, 204)
+
+    def test_get_min_max_bad_model(self):
+        """
+        Test getting the min and max values with a bad model
+        """
+        response = self.client.post(reverse('timeseries_min_max_json'),
+                                    {'model_name': 'xgds_timeseries.Mistake'})
+        self.assertEqual(response.status_code, 405)
 
     def test_get_min_max_no_post(self):
         """
@@ -254,10 +261,67 @@ class xgds_timeseriesTest(TestCase):
 
     def test_get_values_no_post(self):
         """
-        Test getting the min and max values with a get
+        Test getting the values with a get
         """
         response = self.client.get(reverse('timeseries_values_json'))
         self.assertEqual(response.status_code, 403)
+
+    def test_get_flight_values_all(self):
+        """
+        Test getting all the values
+        """
+        response = self.client.post(reverse('timeseries_flight_values_json'), self.post_dict)
+        content = self.is_good_json_response(response, is_list=True)
+        self.assertIsNotNone(content)
+        self.assertEqual(len(content), 100)
+        first = content[0]
+        self.assertEqual(first['timestamp'], '2017-11-10T23:15:01.284000+00:00')
+        self.assertEqual(first['temperature'], 8.13)
+        self.assertEqual(first['pressure'], 3.98)
+
+    def test_get_flight_values_none(self):
+        """
+        Test get no values because bad flight ids
+        """
+        response = self.client.post(reverse('timeseries_flight_values_json'),
+                                            {'model_name': 'xgds_timeseries.TimeSeriesExample',
+                                            'flight_ids': [55, 42]})
+        self.assertEqual(response.status_code, 204)
+
+    def test_get_flight_values_error(self):
+        """
+        Test get no values because bad model name
+        """
+        response = self.client.post(reverse('timeseries_flight_values_json'),
+                                    {'model_name': 'garbage'})
+        self.assertEqual(response.status_code, 405)
+
+    def test_get_flight_values_no_post(self):
+        """
+        Test getting the flight values with a get
+        """
+        response = self.client.get(reverse('timeseries_flight_values_json'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_get_model_flight_data(self):
+        """
+        Test directly getting the flight data
+        """
+        result = TimeSeriesExample.objects.get_flight_data([22])
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, models.QuerySet)
+        self.assertEqual(result.exists(), True)
+        self.assertEqual(result.count(), 100)
+
+    def test_get_model_flight_data_bad_flight_ids(self):
+        """
+        Test directly getting the flight data with bad flight ids
+        """
+        result = TimeSeriesExample.objects.get_flight_data([1])
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, models.QuerySet)
+        self.assertEqual(result.count(), 0)
+        self.assertEqual(result.exists(), False)
 
     def test_get_version(self):
         from xgds_timeseries import get_version
