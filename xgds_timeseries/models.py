@@ -128,7 +128,7 @@ class TimeSeriesModelManager(models.Manager):
             filter_dict = {'%s__gte'% self.get_time_field_name():start_time}
             result = result.filter(**filter_dict)
         if end_time:
-            filter_dict = {'%s__lte'% self.get_time_field_name():start_time}
+            filter_dict = {'%s__lte'% self.get_time_field_name():end_time}
             result = result.filter(**filter_dict)
         if filter_dict:
             result = result.filter(**filter_dict)

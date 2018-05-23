@@ -52,7 +52,7 @@ def unravel_post(post_dict):
     """
     Read the useful contents of the post dictionary
     :param post_dict:
-    :return:
+    :return: the PostData properly filled out
     """
     class PostData(object):
         model = None
@@ -61,15 +61,6 @@ def unravel_post(post_dict):
         start_time = None
         end_time = None
         filter_dict = None
-
-        def __unicode__(self):
-            uresult = "model:%s\n" % str(self.model)
-            uresult += "channel_names:%s\n" % str(self.channel_names)
-            uresult += "flight_ids:%s\n" % str(self.flight_ids)
-            uresult += "start_time:%s\n" % str(self.start_time)
-            uresult += "end_time:%s\n" % str(self.end_time)
-            uresult += "filter_dict:%s\n" % str(self.filter_dict)
-            return uresult
 
     result = PostData()
     model_name = post_dict.get('model_name', None)
@@ -115,21 +106,22 @@ def get_min_max_json(request):
     :return:
     """
     if request.method == 'POST':
-        post_values = unravel_post(request.POST)
-        if not post_values.model:
-            return Http404('Model is required')
+        try:
+            post_values = unravel_post(request.POST)
 
-        values = get_min_max(model=post_values.model,
-                             start_time=post_values.start_time,
-                             end_time=post_values.end_time,
-                             flight_ids=post_values.flight_ids,
-                             filter_dict=post_values.filter_dict,
-                             channel_names=post_values.channel_names)
+            values = get_min_max(model=post_values.model,
+                                 start_time=post_values.start_time,
+                                 end_time=post_values.end_time,
+                                 flight_ids=post_values.flight_ids,
+                                 filter_dict=post_values.filter_dict,
+                                 channel_names=post_values.channel_names)
 
-        if values:
-            return JsonResponse(values, encoder=DatetimeJsonEncoder)
-        else:
-            return JsonResponse({'status': 'error', 'message': 'No min/max values were found.'}, status=204)
+            if values:
+                return JsonResponse(values, encoder=DatetimeJsonEncoder)
+            else:
+                return JsonResponse({'status': 'error', 'message': 'No min/max values were found.'}, status=204)
+        except Exception as e:
+            return HttpResponseNotAllowed(e.message)
     return HttpResponseForbidden()
 
 
@@ -164,9 +156,6 @@ def get_values_json(request):
     if request.method == 'POST':
         try:
             post_values = unravel_post(request.POST)
-            if not post_values.model:
-                return Http404('Model is required')
-
             values = get_values_list(post_values.model, post_values.channel_names, post_values.flight_ids,
                                      post_values.start_time, post_values.end_time, post_values.filter_dict)
             if values:

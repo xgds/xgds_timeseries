@@ -117,6 +117,13 @@ class xgds_timeseriesTest(TestCase):
                                     {'model_name': 'bad.error'})
         self.assertEqual(response.status_code, 405)
 
+    def test_get_channel_descriptions_no_post(self):
+        """
+        Test getting the channel descriptions with a get
+        """
+        response = self.client.get(reverse('timeseries_channel_descriptions_json'))
+        self.assertEqual(response.status_code, 403)
+
     def test_get_min_max(self):
         """
         Test getting the min and max values with a good filter, including temperature and pressure
@@ -140,6 +147,41 @@ class xgds_timeseriesTest(TestCase):
         self.assertEqual(pressure_dict["min"], 1.26)
 
         self.assertNotIn('humidity', content)
+
+    def test_get_min_max_time_bounds(self):
+        """
+        Test getting the min and max values with a good filter, including temp press humidity but for
+        a bounded time
+        """
+        response = self.client.post(reverse('timeseries_min_max_json'),
+                                    {'model_name': 'xgds_timeseries.TimeSeriesExample',
+                                     'flight_ids': [22],
+                                     'start_time': '2017-11-10T23:16:17.673Z',
+                                     'end_time': '2017-11-10T23:16:29.528Z'})
+        content = self.is_good_json_response(response)
+
+        self.assertIn('timestamp', content)
+        timestamp_dict = content['timestamp']
+        print "MIN TIME %s" % timestamp_dict["min"]
+        print "MAX TIME %s" % timestamp_dict["max"]
+
+        self.assertEqual(timestamp_dict["max"], "2017-11-10T23:16:29.528000+00:00")
+        self.assertEqual(timestamp_dict["min"], "2017-11-10T23:16:17.673000+00:00")
+
+        self.assertIn('temperature', content)
+        temp_dict = content['temperature']
+        self.assertEqual(temp_dict["max"], 8.14)
+        self.assertEqual(temp_dict["min"], 8.13)
+
+        self.assertIn('pressure', content)
+        pressure_dict = content['pressure']
+        self.assertEqual(pressure_dict["max"], 3.98)
+        self.assertEqual(pressure_dict["min"], 3.98)
+
+        self.assertIn('humidity', content)
+        humidity_dict = content['humidity']
+        self.assertEqual(humidity_dict["max"], 45)
+        self.assertEqual(humidity_dict["min"], 45)
 
     def test_get_min_max_none(self):
         """
@@ -196,7 +238,6 @@ class xgds_timeseriesTest(TestCase):
     def test_get_values_none(self):
         """
         Test get no values because bad query
-        :return:
         """
         response = self.client.post(reverse('timeseries_values_json'),
                                             {'model_name': 'xgds_timeseries.TimeSeriesExample',
@@ -204,6 +245,9 @@ class xgds_timeseriesTest(TestCase):
         self.assertEqual(response.status_code, 204)
 
     def test_get_values_error(self):
+        """
+        Test get no values because bad model name
+        """
         response = self.client.post(reverse('timeseries_values_json'),
                                     {'model_name': 'garbage'})
         self.assertEqual(response.status_code, 405)
@@ -218,6 +262,6 @@ class xgds_timeseriesTest(TestCase):
     def test_get_version(self):
         from xgds_timeseries import get_version
         result = get_version()
-        self.assertEqual(result, 0.1)
+        self.assertEqual(result, '0.1')
 
 
