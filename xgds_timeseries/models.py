@@ -90,7 +90,7 @@ class TimeSeriesModelManager(models.Manager):
         """
         if not channel_names:
             channel_names = self.get_channel_names()
-        fields = [self.get_time_field_name()]
+        fields = ['pk', self.get_time_field_name()]
         fields.extend(channel_names)
         return fields
 

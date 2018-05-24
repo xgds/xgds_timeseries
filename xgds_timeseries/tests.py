@@ -215,6 +215,7 @@ class xgds_timeseriesTest(TestCase):
         self.assertIsNotNone(content)
         self.assertEqual(len(content), 100)
         first = content[0]
+        self.assertEqual(first['pk'], 1375)
         self.assertEqual(first['timestamp'], '2017-11-10T23:15:01.284000+00:00')
         self.assertEqual(first['temperature'], 8.13)
         self.assertEqual(first['pressure'], 3.98)
