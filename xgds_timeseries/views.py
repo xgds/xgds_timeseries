@@ -15,6 +15,7 @@
 # __END_LICENSE__
 
 import json
+import traceback
 from dateutil.parser import parse as dateparser
 
 from django.http import HttpResponseForbidden, Http404, JsonResponse, HttpResponseNotAllowed
@@ -125,7 +126,25 @@ def get_min_max_json(request):
     return HttpResponseForbidden()
 
 
-def get_values_list(model, channel_names, flight_ids, start_time, end_time, filter_dict):
+def get_packed_list(model, values, channel_names):
+    """
+    Returns a list of lists with the values in the same order as the fields
+    :param model: the model
+    :param values: the iterable values, each value is a dictionary
+    :return: a list of lists
+    """
+    fields = model.objects.get_fields(channel_names)
+    packed = []
+    for entry in values:
+        packed_entry = []
+        for f in fields:
+            packed_entry.append(entry[f])
+        packed.append(packed_entry)
+
+    return packed
+
+
+def get_values_list(model, channel_names, flight_ids, start_time, end_time, filter_dict, packed=True):
     """
     Returns a list of dicts of the data values
     :param model: The model to use
@@ -134,13 +153,17 @@ def get_values_list(model, channel_names, flight_ids, start_time, end_time, filt
     :param start_time: datetime of start time
     :param end_time: datetime of end time
     :param filter_dict: a dictionary of any other filter
+    :param packed: true to return a list of lists, false to return a list of dicts
     :return: a list of dicts with the results.
     """
     values = model.objects.get_values(start_time, end_time, flight_ids, filter_dict, channel_names)
-    return list(values)
+    if not packed:
+        return list(values)
+    else:
+        return get_packed_list(model, values, channel_names)
 
 
-def get_values_json(request):
+def get_values_json(request, packed=True):
     """
     Returns a JsonResponse of the data values described by the filters in the POST dictionary
     :param request: the request
@@ -157,7 +180,8 @@ def get_values_json(request):
         try:
             post_values = unravel_post(request.POST)
             values = get_values_list(post_values.model, post_values.channel_names, post_values.flight_ids,
-                                     post_values.start_time, post_values.end_time, post_values.filter_dict)
+                                     post_values.start_time, post_values.end_time, post_values.filter_dict,
+                                     packed)
             if values:
                 return JsonResponse(values, encoder=DatetimeJsonEncoder, safe=False)
             else:
@@ -167,18 +191,24 @@ def get_values_json(request):
     return HttpResponseForbidden()
 
 
-def get_flight_values_list(model, flight_ids, channel_names):
+def get_flight_values_list(model, flight_ids, channel_names, packed=True):
     """
     Returns a list of dicts of the data values
     :param model: The model to use
     :param flight_ids: The list of channel names you are interested in
+    :param packed: true to return a list of lists, false to return a list of dicts
     :return: a list of dicts with the results.
     """
     values = model.objects.get_flight_values(flight_ids, channel_names)
-    return list(values)
+    if not packed:
+        return list(values)
+    else:
+        result =  get_packed_list(model, values, channel_names)
+        print result
+        return result
 
 
-def get_flight_values_json(request):
+def get_flight_values_json(request, packed=True):
     """
     Returns a JsonResponse of the data values described by the filters in the POST dictionary
     :param request: the request
@@ -186,12 +216,13 @@ def get_flight_values_json(request):
     : model_name: The fully qualified name of the model, ie xgds_braille_app.Environmental
     : channel_names: The list of channel names you are interested in
     : flight_ids: The list of flight ids to filter by
+    :param packed: true to return a list of lists, false to return a list of dicts
     :return: a JsonResponse with a list of dicts with all the results
     """
     if request.method == 'POST':
         try:
             post_values = unravel_post(request.POST)
-            values = get_flight_values_list(post_values.model, post_values.flight_ids, post_values.channel_names)
+            values = get_flight_values_list(post_values.model, post_values.flight_ids, post_values.channel_names, packed=packed)
             if values:
                 return JsonResponse(values, encoder=DatetimeJsonEncoder, safe=False)
             else:

@@ -220,6 +220,20 @@ class xgds_timeseriesTest(TestCase):
         self.assertEqual(first['temperature'], 8.13)
         self.assertEqual(first['pressure'], 3.98)
 
+    def test_get_values_list_all(self):
+        """
+        Test getting all the values as a list
+        """
+        response = self.client.post(reverse('timeseries_values_list_json'), self.post_dict)
+        content = self.is_good_json_response(response, is_list=True)
+        self.assertIsNotNone(content)
+        self.assertEqual(len(content), 100)
+        first = content[0]
+        self.assertEqual(first[0], 1375)
+        self.assertEqual(first[1], '2017-11-10T23:15:01.284000+00:00')
+        self.assertEqual(first[2], 8.13)
+        self.assertEqual(first[3], 3.98)
+
     def test_get_values_filter(self):
         """
         Test getting filtered values
@@ -279,6 +293,20 @@ class xgds_timeseriesTest(TestCase):
         self.assertEqual(first['timestamp'], '2017-11-10T23:15:01.284000+00:00')
         self.assertEqual(first['temperature'], 8.13)
         self.assertEqual(first['pressure'], 3.98)
+
+    def test_get_packed_flight_values_all(self):
+        """
+        Test getting all the values, as a list of lists
+        """
+        response = self.client.post(reverse('timeseries_flight_values_list_json'), self.post_dict)
+        content = self.is_good_json_response(response, is_list=True)
+        self.assertIsNotNone(content)
+        self.assertEqual(len(content), 100)
+        first = content[0]
+        self.assertEqual(first[0], 1375)
+        self.assertEqual(first[1], '2017-11-10T23:15:01.284000+00:00')
+        self.assertEqual(first[2], 8.13)
+        self.assertEqual(first[3], 3.98)
 
     def test_get_flight_values_none(self):
         """

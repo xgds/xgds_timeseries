@@ -23,5 +23,6 @@ from xgds_timeseries import views
 urlpatterns = [# Including these in this order ensures that reverse will return the non-rest urls for use in our server
                url(r'^rest/', include('xgds_timeseries.restUrls')),
                url('', include('xgds_timeseries.restUrls')),
+               url(r'^test/$', TemplateView.as_view(template_name='xgds_timeseries/test.html'), name='xgds_timeseries_test'),
 
-               ]
+              ]
