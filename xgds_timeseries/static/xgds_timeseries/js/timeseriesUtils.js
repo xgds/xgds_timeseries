@@ -47,29 +47,19 @@ $.extend(xgds_timeseries, {
         axisLabels: {
             show: true
         },
-        yaxis: {
-            //max: 100, // set a manual maximum to allow for labels
-            ticks: 0 // this line removes the y ticks
-        },
+        // yaxis: {
+        //     //max: 100, // set a manual maximum to allow for labels
+        //     ticks: 0 // this line removes the y ticks
+        // },
         xaxis: {
             mode: 'time',
             timeformat: DEFAULT_PLOT_TIME_FORMAT,
             timezone: getTimeZone(),
             reserveSpace: false
         },
+		yaxes: [],
         legend: {
             show: false
-        },
-		hooks: {
-            processRawData: function (plot, series, data, datapoints) {
-                debugger;
-                console.log('in process raw data');
-                console.log(data);
-            },
-            processDatapoints: function (plot, series, datapoints) {
-                debugger;
-                console.log('in process datapoints');
-            }
         }
     },
     clearMessage: function(msg){
@@ -92,10 +82,13 @@ $.extend(xgds_timeseries, {
                 if (_.isUndefined(data) || data.length === 0){
                     this.setMessage("None found.");
                 } else {
+                	this.labels = [];
+                	this.channel_descriptions = data;
                     for (var key in data){
-                    	this.labels = [data[key].label];
+                    	this.labels.push([data[key].label]);
 					}
-					//TODO handle multiple plots ...
+					this.getMinMax(postOptions);
+
                 }
             }, this),
             error: $.proxy(function(data){
@@ -113,16 +106,16 @@ $.extend(xgds_timeseries, {
                 if (_.isUndefined(data) || data.length === 0){
                     this.setMessage("None found.");
                 } else {
-                    var skipped = false;
                     for (var key in data){
-                    	if (!skipped) {
-                    		skipped = true;
-                    		continue;
-						}
-                    	this.plotOptions['yaxis'].min = data[key].min;
-                    	this.plotOptions['yaxis'].max = data[key].max;
+                    	if (key !== 'timestamp') {
+                            this.plotOptions.yaxes.push({
+                                'min': data[key].min,
+                                'max': data[key].max,
+                                'ticks': 0
+                            });
+                        }
 					}
-					//TODO handle multiple plots ...
+					this.loadData(postOptions);
                 }
             }, this),
             error: $.proxy(function(data){
@@ -130,16 +123,9 @@ $.extend(xgds_timeseries, {
             }, this)
           });
 	},
-	getData: function(options){
-		if (this.plot != undefined){
-			this.plot.destroy();
-			this.plot = null;
-		}
-		this.getChannelDescriptions(options);
-		//this.getMinMax(options);
-		this.setMessage('Loading data...');
+	loadData: function(options){
 		$.ajax({
-            url: '/timeseries/values/list/json',
+            url: '/timeseries/values/json',
             dataType: 'json',
             data: options,
 			type: 'POST',
@@ -148,16 +134,17 @@ $.extend(xgds_timeseries, {
                     this.setMessage("None found.");
                 } else {
                 	this.clearMessage();
-                	console.log(data);
-                	var cleandata = [];
+                	var data_dict = {};
+                	_.each(Object.keys(this.channel_descriptions), function(field_name, index, list){
+                		data_dict[field_name] = [];
+                	});
                 	for (var i=0; i<data.length; i++){
-                		// assume timestamp is [1]
-						var the_time = moment(data[i][1]).valueOf();
-                		var singlepair = data[i].slice(2);
-                		singlepair.unshift(the_time);
-                		cleandata.push(singlepair);
+                		var the_time = moment(data[i]['timestamp']).valueOf();
+                		_.each(Object.keys(this.channel_descriptions), function(field_name, index, list){
+							data_dict[field_name].push([the_time, data[i][field_name]]);
+						})
 					}
-                	this.rendertimeseriesPlot(options, cleandata);
+                	this.rendertimeseriesPlot(options, data_dict);
                 }
             }, this),
             error: $.proxy(function(data){
@@ -165,13 +152,33 @@ $.extend(xgds_timeseries, {
             }, this)
           });
 	},
+	getData: function(options){
+		if (this.plot != undefined){
+			this.plot.destroy();
+			this.plot = null;
+		}
+		if (this.labels === undefined) {
+            this.getChannelDescriptions(options);
+        } else {
+			this.loadData(options);
+		}
+	},
 
 	rendertimeseriesPlot: function(options, timeseriesData){
-
+		var data_config = [];
+		for (var key in timeseriesData){
+			// TODO STORE MAP OF COLORS
+			data_config.push({data: timeseriesData[key]});
+		}
 		this.plot = $.plot("#plotDiv",
-			               [{ data: timeseriesData, color: 'blue'}],
+			               data_config,
 						   this.plotOptions);
-		console.log("made the plot");
+
+		// get the colors
+		var keys = Object.keys( this.channel_descriptions );
+		_.each(this.plot.getData(), function(data, index){
+			this.channel_descriptions[keys[index]].color = data.color;
+		}, this);
 
 		$("#plotDiv").bind("plothover", function (event, pos, item) {
 			if (item) {

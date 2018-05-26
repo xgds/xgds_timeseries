@@ -6,6 +6,7 @@
     	{% include "xgds_core/playback_controller.html" %}
     </div>
     <div id="plot-container" class="plot-container" >
+        <div id="plotTitle" class="row ml-2"></div>
         <div id="plotDiv" class="plot-div" style="height:200px;">placeholder</div>
 		<div id="plotLegend" class="row ml-2"></div>
 	</div>
@@ -21,7 +22,7 @@
 	<script type="text/javascript" src="{{ EXTERNAL_URL }}flot/jquery.flot.time.js" ></script>
 	<script type="text/javascript" src="{{ EXTERNAL_URL }}flot/jquery.flot.resize.js" ></script>
     <script type="text/javascript">
-   		DEFAULT_PLOT_TIME_FORMAT = '%H:%M';
+   		DEFAULT_PLOT_TIME_FORMAT = '%H:%M:%S';
    		getTimeZone = function() {return '{{ settings.TIME_ZONE}}'};
    	</script>
     <script type="text/javascript" src="{% static 'xgds_timeseries/js/timeseriesUtils.js' %}"></script>
@@ -31,6 +32,7 @@
 {% block jsInit %}
 
 	$(function(){
+        $("#plotTitle").html("<strong>Environmental</strong>");
         var options = { model_name: 'xgds_braille_app.Environmental',
                         flight_ids: [22]};
         xgds_timeseries.getData(options);
