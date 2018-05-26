@@ -16,6 +16,43 @@
 
 var xgds_timeseries = xgds_timeseries || {};
 $.extend(xgds_timeseries, {
+	playback : {
+		lastUpdate: undefined,
+		invalid: false,
+		initialized: false,
+		initialize: function() {
+			if (this.initialized){
+				return;
+			}
+			//moment.tz.setDefault(app.getTimeZone()); // handled in planner app now
+			var _this = this;
+
+			this.initialized = true;
+		},
+		doSetTime: function(currentTime){
+			if (currentTime === undefined){
+				return;
+			}
+			this.lastUpdate = moment(currentTime);
+			//app.vent.trigger('updatePlotTime', this.lastUpdate.toDate().getTime());
+		},
+		start: function(currentTime){
+			this.doSetTime(currentTime);
+		},
+		update: function(currentTime){
+			if (this.lastUpdate === undefined){
+				this.doSetTime(currentTime);
+				return;
+			}
+			var delta = currentTime.diff(this.lastUpdate);
+			if (Math.abs(delta) >= 100) {
+				this.doSetTime(currentTime);
+			}
+		},
+		pause: function() {
+			// noop
+		}
+	},
 	plotOptions: {
         series: {
             lines: {show: true},
@@ -115,6 +152,11 @@ $.extend(xgds_timeseries, {
                             });
                         }
 					}
+					playback.initialize({getStartTime: function(){return data['timestamp'].min;},
+	    						 getEndTime: function(){return data['timestamp'].max;},
+	    						 displayTZ: getTimeZone(),
+                                 slider: true
+	    						 });
 					this.loadData(postOptions);
                 }
             }, this),
@@ -188,6 +230,8 @@ $.extend(xgds_timeseries, {
 				xgds_timeseries.showValue(y);
 			}
 		});
+
+		playback.addListener(this.playback);
 	}
     
     

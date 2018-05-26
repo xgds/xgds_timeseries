@@ -5,6 +5,9 @@
     <div id="controllers" >
     	{% include "xgds_core/playback_controller.html" %}
     </div>
+        <div id="masterSlider" class="masterSlider" >
+		 	  </div>
+
     <div id="plot-container" class="plot-container" >
         <div id="plotTitle" class="row ml-2"></div>
         <div id="plotDiv" class="plot-div" style="height:200px;">placeholder</div>
@@ -15,8 +18,16 @@
 
 {% endblock %}
 
+{%  block cssExtras %}
+    <link rel="stylesheet" type="text/css" href="{{ EXTERNAL_URL }}jquery-ui-dist/jquery-ui.min.css" ></link>
+
+{%  endblock %}
+
 {% block scripts %}
     {{ block.super }}
+    <script type="text/javascript" src="{{ EXTERNAL_URL }}jquery-ui-dist/jquery-ui.min.js"></script>
+
+
     {% include "xgds_core/playbackJS.html" %}
     <script type="text/javascript" src="{{ EXTERNAL_URL }}flot/jquery.flot.js" ></script>
 	<script type="text/javascript" src="{{ EXTERNAL_URL }}flot/jquery.flot.time.js" ></script>
@@ -36,5 +47,6 @@
         var options = { model_name: 'xgds_braille_app.Environmental',
                         flight_ids: [22]};
         xgds_timeseries.getData(options);
+
     });
 {% endblock %}
