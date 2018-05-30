@@ -69,7 +69,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 			if (this.initialized){
 				return;
 			}
-			//moment.tz.setDefault(app.getTimeZone()); // handled in planner app now
+			moment.tz.setDefault(getTimeZone()); // handled in planner app now
 			var _this = this;
 
 			this.initialized = true;
@@ -79,7 +79,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 				return;
 			}
 			this.lastUpdate = moment(currentTime);
-			//app.vent.trigger('updatePlotTime', this.lastUpdate.toDate().getTime());
+			app.vent.trigger('updateTimeseriesTime', this.lastUpdate.toDate().getTime());
 		},
 		start: function(currentTime){
 			this.doSetTime(currentTime);
@@ -145,6 +145,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
         }
     },
 	skip_keys: ['timestamp','pk'],
+	intervalSeconds: 1, // the interval in seconds between data samples, defaults to 1 second TODO default?
 	template: '#plot_contents',
 	initialized: false,
 	initialize: function(options) {
@@ -170,6 +171,15 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 			this.loadData();
 		}
 		playback.addListener(this.playback);
+		this.listenTo(app.vent, 'updateTimeseriesTime', function(currentTime) {
+			var index = _this.getPlotIndex(currentTime);
+			if (!_.isUndefined((index)) && index > -1){
+				_this.selectData(index);
+			} else {
+				// todo clear
+			}
+		});
+
 
     },
     clearMessage: function(msg){
@@ -196,6 +206,9 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
                     for (var channel in data){
                     	this.channel_descriptions[channel] = new ChannelDescriptionModel(data[channel]);
                     	this.loadLegendCookie(channel);
+                    	if ('interval' in data && !_.isNull(data.interval)){
+                    		this.intervalSeconds = data.interval;
+						}
 					}
 					this.getMinMax();
                 }
@@ -227,8 +240,12 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
                             // });
                         }
 					}
-					playback.initialize({getStartTime: function(){return data['timestamp'].min;},
-	    						 getEndTime: function(){return data['timestamp'].max;},
+					this.time_range = data['timestamp'];
+                    this.time_range.duration = moment(this.time_range.max).diff(this.time_range.min, 'seconds');
+                    this.time_range.start = moment(this.time_range.min);
+                    var context = this;
+					playback.initialize({getStartTime: function(){return context.time_range.min;},
+	    						 getEndTime: function(){return context.time_range.max;},
 	    						 displayTZ: getTimeZone(),
                                  slider: true
 	    						 });
@@ -279,7 +296,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 		}
 	},
 	drawTitle: function() {
-		this.$el.find("#plotTitle").html('<strong>' + this.postOptions.title + '</strong>')
+		this.$el.find("#plotTitle").html('&nbsp;&nbsp;&nbsp;<strong>' + this.postOptions.title + '</strong>')
 	},
 	getCookieKey: function(channel) {
 		return this.model_name + '.' + channel;
@@ -376,6 +393,46 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 			$(labelValue).text(BLANKS);
 		}
 	},
+	getPlotIndex: function(currentTime){
+		if (!this.initialized) {
+			return;
+		}
+
+		var shouldUpdate = true;
+		if (!_.isUndefined(this.lastDataIndexTime)) {
+            var timedeltaMS = Math.abs(this.lastDataIndexTime - currentTime);
+            if (timedeltaMS / 1000 < this.intervalSeconds) {
+                shouldUpdate = false;
+            }
+        }
+
+		if (shouldUpdate) {
+			var context = this;
+			var sampleData = this.plot.getData()[0].data;
+			var foundIndex = _.findIndex(sampleData, function(value){
+				return Math.abs((currentTime - value[0])/1000) < context.intervalSeconds;
+			});
+
+			if (this.lastDataIndex !== foundIndex){
+				// now verify the actual time at that index
+				var testData = sampleData[foundIndex];
+				if (_.isUndefined(testData)) {
+					return undefined;
+				}
+				var testDiff = Math.abs((currentTime - testData[0])/1000)
+				if (testDiff > this.intervalSeconds) {
+					console.log('BOO bad time ' + testDiff);
+					//TODO find better time.  This may easily happen if we have data dropouts.
+					return undefined; // not sure what to do
+				}
+
+				this.lastDataIndex = foundIndex;
+				this.lastDataIndexTime = currentTime;
+			}
+		}
+		return this.lastDataIndex;
+	},
+
 	updateTimeValue: function(newTime){
 		//TODO update the time for the slider maybe
 	},
