@@ -144,6 +144,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
             show: false
         }
     },
+	skip_keys: ['timestamp','pk'],
 	template: '#plot_contents',
 	initialized: false,
 	initialize: function(options) {
@@ -192,8 +193,9 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
                     this.setMessage("None found.");
                 } else {
                 	this.channel_descriptions = {};
-                    for (var key in data){
-                    	this.channel_descriptions[key] = new ChannelDescriptionModel(data[key]);
+                    for (var channel in data){
+                    	this.channel_descriptions[channel] = new ChannelDescriptionModel(data[channel]);
+                    	this.loadLegendCookie(channel);
 					}
 					this.getMinMax();
                 }
@@ -213,14 +215,14 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
                 if (_.isUndefined(data) || data.length === 0){
                     this.setMessage("None found.");
                 } else {
-                	var skip_keys = ['timestamp','pk'];
-                    for (var key in data){
-                    	if (!skip_keys.includes(key)) {
-                    		this.channel_descriptions[key].set('min', data[key].min);
-                            this.channel_descriptions[key].set('max', data[key].max);
+
+                    for (var channel in data){
+                    	if (!this.skip_keys.includes(channel)) {
+                    		this.channel_descriptions[channel].set('min', data[channel].min);
+                            this.channel_descriptions[channel].set('max', data[channel].max);
                             // this.plotOptions.yaxes.push({
-                            //     'min': data[key].min,
-                            //     'max': data[key].max,
+                            //     'min': data[channel].min,
+                            //     'max': data[channel].max,
                             //     'ticks': 0
                             // });
                         }
@@ -269,18 +271,8 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
             }, this)
           });
 	},
-    loadLegendCookie: function(key) {
-		var cookieVisible = Cookies.get(key);
-		var visible = true;
-		if (cookieVisible != undefined){
-			visible = (cookieVisible == 'true');
-		} else {
-			Cookies.set(key, true);
-		}
-		return visible;
-	},
-    togglePlot(key, visible){
-		var cd = this.channel_descriptions[key];
+    togglePlot(channel, visible){
+		var cd = this.channel_descriptions[channel];
 		if (cd.get('visible') != visible){
 			cd.set('visible', visible);
 			this.onRender();
@@ -289,34 +281,63 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 	drawTitle: function() {
 		this.$el.find("#plotTitle").html('<strong>' + this.postOptions.title + '</strong>')
 	},
+	getCookieKey: function(channel) {
+		return this.model_name + '.' + channel;
+	},
+	loadLegendCookie: function(channel) {
+		var cookieKey = this.getCookieKey(channel);
+		var cookieVisible = Cookies.get(cookieKey);
+		var visible = true;
+		if (!_.isUndefined(cookieVisible)){
+			visible = (cookieVisible == 'true');
+		} else {
+			Cookies.set(cookieKey, visible);
+		}
+		this.channel_descriptions[channel].set('visible', visible);
+		return visible;
+	},
     drawLegendLabels: function() {
 		var context = this;
+		var plotLegend = this.$el.find("#plotLegend");
 		var keys = Object.keys(this.channel_descriptions);
-		for (var i=0; i<keys.length; i++) {
-			var label=keys[i];
-			var underLabel = label.split(' ').join('_');
-			var theColor = this.channel_descriptions[label].color;
-			var content = '<div id="' + underLabel + 'legend_div" class="d-sm-inline-flex flex-row" style="min-width:180px;">';
-			content += '<label><input type="checkbox" id="' + underLabel + '_checkbox" value="' + label + '" style="display:inline-block;" class="mr-1"><span id="' + underLabel + '_label" style="color:' + theColor + '">' + label + ':</span><span id="' + underLabel + '_value">' + BLANKS + '</span></label>';
-			content += '</div>'
-            this.$el.find("#plotLegend").append(content);
-			var visible = this.loadLegendCookie(label);
-			$("#" + underLabel + "_checkbox").prop('checked', visible);
-			this.channel_descriptions[label].set('visible', visible);
-			$("#" + underLabel + "_checkbox").change(function() {
+		_.each(Object.keys(this.channel_descriptions), function(channel) {
+			var cd = context.channel_descriptions[channel];
+			var underChannel = channel.split(' ').join('_');
+
+			var content = '<div id="' + underChannel + 'legend_div" class="d-sm-inline-flex flex-row" style="min-width:180px;">';
+			content += '<label><input type="checkbox" id="' + underChannel + '_checkbox" value="' + channel +
+				'" style="display:inline-block;" class="mr-1"><span id="' + underChannel + '_label" style="color:' +
+				cd.get('color') + '">' + cd.get('label') + ':</span><span id="' + underChannel + '_value">' +
+				BLANKS + '</span>';
+			if (cd.get('units') !== null) {
+				content += '<span id="\' + underChannel + \'_units">&nbsp;' + cd.get('units') + '</span>';
+            }
+			content += '</label></div>';
+			plotLegend.append(content);
+
+			var checkboxId = "#" + underChannel + "_checkbox";
+			$(checkboxId).prop('checked', cd.get('visible'));
+
+			$(checkboxId).change(function() {
 				var id = $(this).attr('id');
 				var checked = $(this).is(":checked");
-				Cookies.set($(this).attr('value'), checked);
+				Cookies.set(context.getCookieKey($(this).attr('value')), checked);
 				context.togglePlot($(this).attr('value'), checked);
 			});
-		}
+
+		});
 	},
 	buildPlotDataArray: function() {
 		var result = [];
-		_.each(Object.keys(this.channel_descriptions), function(key) {
-			var cd = this.channel_descriptions[key];
+		_.each(Object.keys(this.channel_descriptions), function(channel) {
+			var cd = this.channel_descriptions[channel];
 			if (cd.get('visible')) {
-                result.push({label: cd.get('label'), data: cd.get('data'), key: key})
+				var channel_dict = {label: cd.get('label'), data: cd.get('data'), channel: channel};
+				var color = cd.get('color');
+				if (!_.isUndefined(color)) {
+					channel_dict['color'] = color;
+				}
+                result.push(channel_dict);
             }
 		}, this);
         return result;
@@ -324,33 +345,24 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 	selectData: function(index) {
 		if (this.plot != undefined){
 			this.plot.unhighlight();
-			var plotData = this.plot.getData();
 			var time = null;
-			var value = null;
-			var label = undefined;
-			for (var i=0; i<plotData.length; i++){
-				label = plotData[i].label;
-				if (label !== undefined){
-					var dataAtIndex = plotData[i].data[index];
-					this.plot.highlight(i, index);
-
-					if (dataAtIndex != undefined) {
-						if (time == null){
-							time = dataAtIndex[0];
-							value = dataAtIndex[1];
-						}
-					} else {
-						if (time == null){
-							time = dataAtIndex[0];
-							value = null;
-						}
+			var context = this;
+			_.each(this.plot.getData(), function(plotData, i) {
+				var channel = plotData.channel;
+				var value = null;
+				if (!_.isUndefined(channel)) {
+					var dataAtIndex = plotData.data[index];
+					if (!_.isUndefined(dataAtIndex)) {
+						context.plot.highlight(i, index);
+						time = dataAtIndex[0];
+						value = dataAtIndex[1];
                     }
-
-					this.updateDataValue(plotData[i].key, value);
+                    context.updateDataValue(channel, value);
 				}
-				label = undefined;
+			});
+			if (!_.isNull(time)) {
+				this.updateTimeValue(time);
 			}
-			this.updateTimeValue(time);
 		}
 	},
 	updateDataValue: function(label, value){
@@ -382,7 +394,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 			// get the colors
 			var keys = Object.keys( this.channel_descriptions );
 			_.each(this.plot.getData(), function(data, index){
-				this.channel_descriptions[keys[index]].color = data.color;
+				this.channel_descriptions[keys[index]].set('color', data.color);
 			}, this);
 
 			// draw the legend labels
@@ -408,29 +420,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 		}
 		this.rendering = false;
 	}
-	// rendertimeseriesPlot: function(options, timeseriesData){
-	// 	var data_config = [];
-	// 	for (var key in timeseriesData){
-	// 		data_config.push({data: timeseriesData[key]});
-	// 	}
-	// 	this.plot = $.plot("#plotDiv",
-	// 		               data_config,
-	// 					   this.plotOptions);
-    //
-    //
-    //
-	// 	$("#plotDiv").bind("plothover", function (event, pos, item) {
-	// 		if (item) {
-	// 			var	y = item.datapoint[1];
-	// 			xgds_timeseries.plot.unhighlight();
-	// 			xgds_timeseries.plot.highlight(item.series, item.datapoint);
-	// 			xgds_timeseries.showValue(y);
-	// 		}
-	// 	});
-    //
-	// }
-    
-    
+
 });
 
 });
