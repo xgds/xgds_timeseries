@@ -59,6 +59,21 @@ class xgds_timeseriesTest(TestCase):
         self.assertIsNotNone(content)
         self.assertIn('xgds_timeseries.TimeSeriesExample', content)
 
+    def test_get_timeseries_classes_and_titles(self):
+        """
+        Test getting the timeseries classes and titles including the example one
+        """
+        result = views.get_time_series_classes(skip_example=False)
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, list)
+        tsExample = None
+        for entry in result:
+            if entry['model_name'] == 'xgds_timeseries.TimeSeriesExample':
+                tsExample = entry
+                break
+        self.assertIsNotNone(tsExample)
+        self.assertEqual(tsExample['title'], 'Time Series Example')
+
     def is_good_json_response(self, response, is_list=False):
         """
         Test that a json response is good, and return its content as a dict

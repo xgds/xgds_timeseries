@@ -466,7 +466,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 					context.selectData(item.dataIndex);
 				}
 			});
-			$('#plot-container').resize(function(event) {context.handleResize();});
+			this.$el.resize(function(event) {context.handleResize();});
 		} else {
 			var plotOptions = this.plot.getOptions();
 			//plotOptions.xaxis.timeformat = this.plotOptions.xaxis.timeformat;

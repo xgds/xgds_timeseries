@@ -234,6 +234,8 @@ class TimeSeriesExample(TimeSeriesModel):
     humidity = models.FloatField(null=True, blank=True)
     flight = models.ForeignKey('xgds_core.Flight', on_delete=models.SET_NULL, blank=True, null=True)
 
+    title = 'Time Series Example'
+
     channel_descriptions = {
                             'temperature': ChannelDescription('Temp', units='C', global_min=0.000000, global_max=45.000000),
                             'pressure': ChannelDescription('Pressure'),

@@ -34,7 +34,7 @@ def get_time_series_classes(skip_example=True):
     """
     list_result = []
     for the_class in TimeSeriesModel.__subclasses__():
-        if skip_example and 'xample' not in the_class.__name__:  # skip example classes
+        if skip_example and 'xample' in the_class.__name__:  # skip example classes
             continue
         list_result.append('%s.%s' % (the_class._meta.app_label, the_class.__name__))
     return list_result
@@ -47,6 +47,22 @@ def get_time_series_classes_json(skip_example=True):
     :return:
     """
     return JsonResponse(get_time_series_classes(skip_example), safe=False)
+
+
+def get_time_series_classes_and_titles(skip_example=True):
+    """
+    Return a list of dictionaries of time series classes and their titles
+    :param skip_example: True to skip the example classes, false otherwise
+    :return: a list of dictionaries
+    """
+    result = []
+
+    for the_class in TimeSeriesModel.__subclasses__():
+        if skip_example and 'xample' in the_class.__name__:  # skip example classes
+            continue
+        result.append({'model_name': '%s.%s' % (the_class._meta.app_label, the_class.__name__),
+                      'title': str(the_class.title)})
+    return result
 
 
 def unravel_post(post_dict):
