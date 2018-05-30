@@ -40,6 +40,12 @@ class ChannelDescription(object):
         self.global_max = global_max
         self.interval = interval
 
+    def __repr__(self):
+        return '%s: [units: %s, gmin: %s, gmax: %s, interval: %s]' % (self.label, self.units, self.global_min, self.global_max, self.interval)
+
+    def __str__(self):
+        return self.__repr__()
+
 
 class TimeSeriesModelManager(models.Manager):
     """

@@ -232,7 +232,7 @@ def get_flight_values_json(request, packed=True):
     return HttpResponseForbidden()
 
 
-def get_channel_descriptions(model, channel_name):
+def get_channel_descriptions(model, channel_name=None):
     """
     Returns a dictionary of channel descriptions for the given model
     :param model: the model
