@@ -8,7 +8,7 @@ cd $DIR
 DESTDIR="../static/tz"
 if [[ -e $DESTDIR ]]; then
    echo 'timezones already loaded'
-   exit 1
+   exit
 fi
 
 echo 'making $DESTDIR'
