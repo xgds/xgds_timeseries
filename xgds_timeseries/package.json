@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "dependencies": {
-  },
-  "django": {
-  },
-  "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
   },
+  "dependencies": {
+    "timezone-js": "^0.4.13"
+  },
+  "django": {},
+  "devDependencies": {},
   "author": "",
   "license": "Apache-2.0"
 }

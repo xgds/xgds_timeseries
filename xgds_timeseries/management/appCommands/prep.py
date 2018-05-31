@@ -32,10 +32,11 @@ from django.core.management.base import NoArgsCommand
 
 from geocamUtil.management import commandUtil
 
+import subprocess
+
 
 class Command(NoArgsCommand):
     help = 'Prep xgds_timeseries'
 
     def handle_noargs(self, **options):
-        # put your code here
-        pass
+        subprocess.call(["scripts/install-tz.sh"])

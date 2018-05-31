@@ -10,3 +10,5 @@
 /xgds_timeseries/build
 TEST
 /xgds_timeseries/migrations
+tz/
+node_modules/

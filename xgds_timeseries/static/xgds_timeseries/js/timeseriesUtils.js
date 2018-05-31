@@ -69,9 +69,6 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 			if (this.initialized){
 				return;
 			}
-			moment.tz.setDefault(getTimeZone()); // handled in planner app now
-			var _this = this;
-
 			this.initialized = true;
 		},
 		doSetTime: function(currentTime){
