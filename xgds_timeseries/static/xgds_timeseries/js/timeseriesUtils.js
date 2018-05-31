@@ -79,7 +79,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 				return;
 			}
 			this.lastUpdate = moment(currentTime);
-			app.vent.trigger('updateTimeseriesTime', this.lastUpdate.toDate().getTime());
+			app.vent.trigger('updateTimeseriesTime', currentTime);
 		},
 		start: function(currentTime){
 			this.doSetTime(currentTime);
@@ -129,17 +129,16 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
         axisLabels: {
             show: true
         },
-        // yaxis: {
-        //     //max: 100, // set a manual maximum to allow for labels
-        //     ticks: 0 // this line removes the y ticks
-        // },
+        yaxis: {
+            ticks: 0 // this line removes the y ticks
+        },
         xaxis: {
             mode: 'time',
             timeformat: DEFAULT_PLOT_TIME_FORMAT,
             timezone: getTimeZone(),
             reserveSpace: false
         },
-		yaxes: [],
+		//yaxes: [],
         legend: {
             show: false
         }
@@ -233,22 +232,12 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
                     	if (!this.skip_keys.includes(channel)) {
                     		this.channel_descriptions[channel].set('min', data[channel].min);
                             this.channel_descriptions[channel].set('max', data[channel].max);
-                            // this.plotOptions.yaxes.push({
-                            //     'min': data[channel].min,
-                            //     'max': data[channel].max,
-                            //     'ticks': 0
-                            // });
                         }
 					}
 					this.time_range = data['timestamp'];
                     this.time_range.duration = moment(this.time_range.max).diff(this.time_range.min, 'seconds');
                     this.time_range.start = moment(this.time_range.min);
                     var context = this;
-					playback.initialize({getStartTime: function(){return context.time_range.min;},
-	    						 getEndTime: function(){return context.time_range.max;},
-	    						 displayTZ: getTimeZone(),
-                                 slider: true
-	    						 });
 					this.loadData();
                 }
             }, this),
@@ -275,7 +264,6 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 							var data_array = _this.channel_descriptions[field_name].get('data');
 							var datum = data_block[field_name]
 							data_array.push([the_time, datum]);
-							var i = 10;
 						});
 					}, this);
 
