@@ -63,7 +63,7 @@ class xgds_timeseriesTest(TestCase):
         """
         Test getting the timeseries classes and titles including the example one
         """
-        result = views.get_time_series_classes(skip_example=False)
+        result = views.get_time_series_classes_and_titles(skip_example=False)
         self.assertIsNotNone(result)
         self.assertIsInstance(result, list)
         tsExample = None
