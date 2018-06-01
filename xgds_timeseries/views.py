@@ -220,7 +220,6 @@ def get_flight_values_list(model, flight_ids, channel_names, packed=True):
         return list(values)
     else:
         result =  get_packed_list(model, values, channel_names)
-        print result
         return result
 
 
