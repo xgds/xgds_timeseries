@@ -18,7 +18,9 @@ from django.conf.urls import url
 
 import xgds_timeseries.views as views
 
-urlpatterns = [url(r'^classes/json$', views.get_time_series_classes_json, {}, 'timeseries_classes_json'),
+urlpatterns = [url(r'^classes/json$', views.get_time_series_classes_json, {'skip_example': True}, 'timeseries_classes_json'),
+               url(r'^classes/example/json$', views.get_time_series_classes_json, {'skip_example': False},
+                   'timeseries_classes_json_example'),
                url(r'^min_max/json$', views.get_min_max_json, {}, 'timeseries_min_max_json'),
                url(r'^values/json$', views.get_values_json, {'packed':False}, 'timeseries_values_json'),
                url(r'^values/flight/json$', views.get_flight_values_json, {'packed':False}, 'timeseries_flight_values_json'),

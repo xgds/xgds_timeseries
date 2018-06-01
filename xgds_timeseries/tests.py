@@ -52,7 +52,7 @@ class xgds_timeseriesTest(TestCase):
         """
         Test getting the timeseries classes as a json response
         """
-        response = self.client.get(reverse('timeseries_classes_json'), kwargs={'skip_example':False})
+        response = self.client.get(reverse('timeseries_classes_json_example'))
         self.assertEqual(response.status_code, 200)
         self.assertIsInstance(response, JsonResponse)
         content = response.content

@@ -40,7 +40,7 @@ def get_time_series_classes(skip_example=True):
     return list_result
 
 
-def get_time_series_classes_json(skip_example=True):
+def get_time_series_classes_json(request, skip_example=True):
     """
     Return a json response with the list of time series classes
     :param skip_example: True to skip the example classes, false otherwise
