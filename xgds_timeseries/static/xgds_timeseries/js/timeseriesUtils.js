@@ -76,6 +76,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 				return;
 			}
 			this.lastUpdate = moment(currentTime);
+			// TODO this is too global. Should just be listening to self.
 			app.vent.trigger('updateTimeseriesTime', currentTime);
 		},
 		start: function(currentTime){
