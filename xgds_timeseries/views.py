@@ -172,7 +172,11 @@ def get_values_list(model, channel_names, flight_ids, start_time, end_time, filt
     :param packed: true to return a list of lists, false to return a list of dicts
     :return: a list of dicts with the results.
     """
-    values = model.objects.get_values(start_time, end_time, flight_ids, filter_dict, channel_names)
+    if hasattr(model, 'dynamic') and model.dynamic:
+        values = model.objects.get_dynamic_values(start_time, end_time, flight_ids, filter_dict, channel_names)
+    else:
+        values = model.objects.get_values(start_time, end_time, flight_ids, filter_dict, channel_names)
+
     if not packed:
         return list(values)
     else:

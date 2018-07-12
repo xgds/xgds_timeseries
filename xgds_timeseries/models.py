@@ -140,6 +140,22 @@ class TimeSeriesModelManager(models.Manager):
             result = result.filter(**filter_dict)
         return result
 
+    def get_dynamic_values(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None, channel_names=None):
+        timestamps = {}
+        query = self.get_data(start_time, end_time, flight_ids, filter_dict)
+        for q in query:
+            if q.time_stamp not in timestamps:
+                timestamps[q.time_stamp] = {
+                    "time_stamp": q.time_stamp,
+                    getattr(q, q.dynamic_separator): getattr(q, q.dynamic_value),
+                }
+            else:
+                timestamps[q.time_stamp][getattr(q, q.dynamic_separator)] = getattr(q, q.dynamic_value)
+        timestamps_keys = sorted(list(timestamps.keys()))
+        timestamps_as_list = [timestamps[x] for x in timestamps_keys]
+        return timestamps_as_list
+
+
     def get_values(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None, channel_names=None):
         """
         This HITS THE DATABASE to get a QuerySet of dictionaries which includes the timestamps and the
