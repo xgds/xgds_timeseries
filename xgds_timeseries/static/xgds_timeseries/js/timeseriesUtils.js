@@ -247,7 +247,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 	loadData: function(){
 		var _this = this;
 		$.ajax({
-            url: '/timeseries/values/json',
+            url: '/timeseries/values/flight/json',
             dataType: 'json',
             data: this.postOptions,
 			type: 'POST',
