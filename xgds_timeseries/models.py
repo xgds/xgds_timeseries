@@ -120,6 +120,21 @@ class TimeSeriesModelManager(models.Manager):
         """
         return self.get_flight_data(flight_ids).values(*self.get_fields(channel_names))
 
+    def get_dynamic_flight_values(self, flight_ids, channel_names=None, dynamic_value=None, dynamic_separator=None):
+        timestamps = {}
+        query = self.get_flight_data(flight_ids)
+        for q in query:
+            if q.timestamp not in timestamps:
+                timestamps[q.timestamp] = {
+                    "timestamp": q.timestamp,
+                    getattr(q, dynamic_separator): getattr(q, dynamic_value),
+                }
+            else:
+                timestamps[q.timestamp][getattr(q, dynamic_separator)] = getattr(q, dynamic_value)
+        timestamps_keys = sorted(list(timestamps.keys()))
+        timestamps_as_list = [timestamps[x] for x in timestamps_keys]
+        return timestamps_as_list
+
     def get_data(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None):
         """
         This returns a QuerySet including the full model instances for the specified flight ids and other filters.
@@ -141,6 +156,22 @@ class TimeSeriesModelManager(models.Manager):
         if filter_dict:
             result = result.filter(**filter_dict)
         return result
+
+    def get_dynamic_values(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None, channel_names=None):
+        timestamps = {}
+        query = self.get_data(start_time, end_time, flight_ids, filter_dict)
+        for q in query:
+            if q.time_stamp not in timestamps:
+                timestamps[q.time_stamp] = {
+                    "time_stamp": q.time_stamp,
+                    getattr(q, q.dynamic_separator): getattr(q, q.dynamic_value),
+                }
+            else:
+                timestamps[q.time_stamp][getattr(q, q.dynamic_separator)] = getattr(q, q.dynamic_value)
+        timestamps_keys = sorted(list(timestamps.keys()))
+        timestamps_as_list = [timestamps[x] for x in timestamps_keys]
+        return timestamps_as_list
+
 
     def get_values(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None, channel_names=None):
         """
@@ -217,6 +248,31 @@ class TimeSeriesModelManager(models.Manager):
         for field in fields:
             result[field] = {'min': filtered_data.aggregate(Min(field))['%s__min' % field],
                              'max': filtered_data.aggregate(Max(field))['%s__max' % field]}
+        return result
+
+    def get_dynamic_min_max(
+            self, start_time=None, end_time=None, flight_ids=None, filter_dict=None, channel_names=None,
+            dynamic_value=None, dynamic_separator=None,
+    ):
+        def dynamic_aggregate(field_name, data, func):
+            custom_data = [getattr(x, dynamic_value) for x in data if getattr(x, dynamic_separator) == field_name]
+            return func(custom_data)
+
+        filtered_data = self.get_data(start_time, end_time, flight_ids, filter_dict)
+        if not filtered_data.exists(): return None
+
+        result = {}
+        for field in self.get_fields(channel_names):
+            if field in channel_names:
+                result[field] = {
+                    'min': dynamic_aggregate(field, filtered_data, min),
+                    'max': dynamic_aggregate(field, filtered_data, max),
+                }
+            else:
+                result[field] = {
+                    'min': filtered_data.aggregate(Min(field))['%s__min' % field],
+                    'max': filtered_data.aggregate(Max(field))['%s__max' % field],
+                }
         return result
 
 
