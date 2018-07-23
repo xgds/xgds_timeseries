@@ -109,6 +109,17 @@ def get_min_max(model, start_time=None, end_time=None, flight_ids=None, filter_d
     :param channel_names: The list of channel names you are interested in
     :return: a list of dicts with the min max values.
     """
+    if hasattr(model, 'dynamic') and model.dynamic:
+        return model.objects.get_dynamic_min_max(
+            start_time=start_time,
+            end_time=end_time,
+            flight_ids=flight_ids,
+            filter_dict=filter_dict,
+            channel_names=model.get_channel_names(),
+            dynamic_value=model.dynamic_value,
+            dynamic_separator=model.dynamic_separator,
+        )
+
     return model.objects.get_min_max(start_time=start_time,
                                      end_time=end_time,
                                      flight_ids=flight_ids,
@@ -138,7 +149,7 @@ def get_min_max_json(request):
             else:
                 return JsonResponse({'status': 'error', 'message': 'No min/max values were found.'}, status=204)
         except Exception as e:
-            return HttpResponseNotAllowed(e.message)
+            return HttpResponseNotAllowed(["POST"], content=traceback.format_exc())
     return HttpResponseForbidden()
 
 
@@ -219,7 +230,15 @@ def get_flight_values_list(model, flight_ids, channel_names, packed=True):
     :param packed: true to return a list of lists, false to return a list of dicts
     :return: a list of dicts with the results.
     """
-    values = model.objects.get_flight_values(flight_ids, channel_names)
+    if hasattr(model, 'dynamic') and model.dynamic:
+        values = model.objects.get_dynamic_flight_values(
+            flight_ids,
+            channel_names=model.get_channel_names(),
+            dynamic_value=model.dynamic_value,
+            dynamic_separator=model.dynamic_separator,
+        )
+    else:
+        values = model.objects.get_flight_values(flight_ids, channel_names)
     if not packed:
         return list(values)
     else:
@@ -247,7 +266,7 @@ def get_flight_values_json(request, packed=True):
             else:
                 return JsonResponse({'status': 'error', 'message': 'No values were found.'}, status=204)
         except Exception as e:
-            return HttpResponseNotAllowed(e.message)
+            return HttpResponseNotAllowed(["POST"], content=traceback.format_exc())
     return HttpResponseForbidden()
 
 
@@ -288,5 +307,5 @@ def get_channel_descriptions_json(request):
                         return JsonResponse(result)
                 return JsonResponse({'error': 'bad parameters'}, status=204)
         except Exception as e:
-            return HttpResponseNotAllowed(e.message)
+            return HttpResponseNotAllowed(["POST"], content=traceback.format_exc())
     return HttpResponseForbidden()
