@@ -14,6 +14,8 @@
 # specific language governing permissions and limitations under the License.
 # __END_LICENSE__
 
+import datetime
+from django.conf import settings
 from django.db import models
 from django.db.models import Min, Max
 
@@ -153,6 +155,50 @@ class TimeSeriesModelManager(models.Manager):
         """
         return self.get_data(start_time, end_time, flight_ids, filter_dict).values(*self.get_fields(channel_names))
 
+    def get_data_at_time(self, time, flight_ids=None, filter_dict=None):
+        """
+        This returns a QuerySet including the full model instances for the specified flight ids and other filters.
+        The data will be the closest value at this time or before,
+        given this setting: GEOCAM_TRACK_CLOSEST_POSITION_MAX_DIFFERENCE_SECONDS
+        Unless this is a stateful model, in which case it will take the previous value for the flight
+        :param time: The time, timezone aware
+        :param flight_ids: the list of flight ids
+        :param filter_dict: A dictionary of other filter terms
+        :return: QuerySet with all of the model instances that match the filters
+        """
+        result = self
+        if not time:
+            raise Exception('Time is required')
+        if flight_ids:
+            result = result.filter(flight_id__in=flight_ids)
+        if self.model.stateful:
+            filter_dict = {'%s__lte' % self.get_time_field_name(): time}
+        else:
+            # time must be gte the time passed in less the delta
+            min_time = time - datetime.timedelta(seconds=settings.GEOCAM_TRACK_CLOSEST_POSITION_MAX_DIFFERENCE_SECONDS)
+            filter_dict = {'%s__gte' % self.get_time_field_name(): min_time,
+                           '%s__lte' % self.get_time_field_name(): time}
+
+        result = result.filter(**filter_dict)
+        if not self.model.stateful:
+            result = result.order_by('-%s' % self.get_time_field_name())
+        return result
+
+    def get_values_at_time(self, time=None, flight_ids=None, filter_dict=None, channel_names=None):
+        """
+        This HITS THE DATABASE to get a QuerySet of dictionaries which includes the timestamps and the
+        values for the specified channels which match the filter
+        The data will be the closest value at this time or before,
+        given this setting: GEOCAM_TRACK_CLOSEST_POSITION_MAX_DIFFERENCE_SECONDS
+        Unless this is a stateful model, in which case it will take the previous value for the flight
+        :param time: The time, timezone aware
+        :param flight_ids: the list of flight ids
+        :param filter_dict: A dictionary of other filter terms
+        :param channel_names: list of names of channels
+        :return: A QuerySet of dictionaries of the values which include timestamp and selected channels
+        """
+        return self.get_data_at_time(time, flight_ids, filter_dict).values(*self.get_fields(channel_names))
+
     def get_min_max(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None, channel_names=None):
         """
         This HITS THE DATABASE to get a dictionary of min/max values for the channels.  Timestamp is always provided.
@@ -178,6 +224,9 @@ class TimeSeriesModel(models.Model):
 
     objects = TimeSeriesModelManager()
     channel_descriptions = {}
+
+    # If your model is stateful, ie has data coming in itermittantly that indicates state, override stateful with true.
+    stateful = False
 
     @classmethod
     def get_channel_description(cls, channel_name):

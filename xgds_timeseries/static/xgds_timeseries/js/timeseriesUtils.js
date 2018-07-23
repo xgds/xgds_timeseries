@@ -244,6 +244,53 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
             }, this)
           });
 	},
+	loadLastFlightData: function() {
+		var _this = this;
+		var options = Object.assign({}, this.postOptions);
+		var flight_end_unix = undefined;
+
+		if (!_.isUndefined(flight_end)) {  // this is defined right now in the html template top level
+            options.time = flight_end.format();
+            flight_end_unix = flight_end.unix();
+        } else {
+			// can't do this function
+			this.initialized = true;
+			app.vent.trigger('data:loaded', this.postOptions.model_name);
+		}
+
+		console.log('options are');
+		console.log(options);
+		$.ajax({
+            url: '/timeseries/values/flight/time/json',
+            dataType: 'json',
+            data: options,
+			type: 'POST',
+            success: $.proxy(function(data) {
+                if (_.isUndefined(data) || data.length === 0){
+                	// this might be fine, if it is not stateful data.  Just go on.
+                	this.initialized = true;
+					app.vent.trigger('data:loaded', this.postOptions.model_name);
+                } else {
+                	this.clearMessage();
+					_.each(data, function(data_block) {
+						var the_time = moment(data_block['timestamp']).valueOf();
+						_.each(Object.keys(this.channel_descriptions), function(field_name, index, list){
+							var data_array = _this.channel_descriptions[field_name].get('data');
+							var datum = data_block[field_name];
+							// we looked up this data to see what was the value at the end time, if we got data back then it is to be used for this end time.
+							data_array.push([flight_end_unix, datum]);
+						});
+					}, this);
+
+					this.initialized = true;
+					app.vent.trigger('data:loaded', this.postOptions.model_name);
+                }
+            }, this),
+            error: $.proxy(function(data){
+                this.setMessage("Search failed.");
+            }, this)
+          });
+	},
 	loadData: function(){
 		var _this = this;
 		$.ajax({
@@ -265,8 +312,13 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 						});
 					}, this);
 
-					this.initialized = true;
-					app.vent.trigger('data:loaded', this.postOptions.model_name);
+					if ('flight_ids' in this.postOptions) {
+						// make sure we have the last data for the flight
+						_this.loadLastFlightData();
+					} else {
+                        this.initialized = true;
+                        app.vent.trigger('data:loaded', this.postOptions.model_name);
+                    }
                 }
             }, this),
             error: $.proxy(function(data){
@@ -452,7 +504,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 					context.selectData(item.dataIndex);
 				}
 			});
-			this.$el.resize(function(event) {context.handleResize();});
+			// this.$el.resize(function(event) {context.handleResize();});
 		} else {
 			var plotOptions = this.plot.getOptions();
 			//plotOptions.xaxis.timeformat = this.plotOptions.xaxis.timeformat;

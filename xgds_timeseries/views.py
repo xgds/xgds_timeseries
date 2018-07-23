@@ -78,6 +78,7 @@ def unravel_post(post_dict):
         start_time = None
         end_time = None
         filter_dict = None
+        time = None
 
     result = PostData()
     model_name = post_dict.get('model_name', None)
@@ -92,6 +93,10 @@ def unravel_post(post_dict):
     end_time_string = post_dict.get('end_time', None)
     if end_time_string:
         result.end_time = dateparser(end_time_string)
+    time_string = post_dict.get('time', None)
+    if time_string:
+        result.time = dateparser(time_string)
+
     filter_json = post_dict.get('filter', None)
     if filter_json:
         result.filter_dict = json.loads(filter_json)
@@ -219,7 +224,30 @@ def get_flight_values_list(model, flight_ids, channel_names, packed=True):
     if not packed:
         return list(values)
     else:
-        result =  get_packed_list(model, values, channel_names)
+        result = get_packed_list(model, values, channel_names)
+        return result
+
+
+def get_flight_values_time_list(model, flight_ids, channel_names, packed=True, time=None):
+    """
+    Returns a list of one dict of the data values
+    :param model: The model to use
+    :param flight_ids: The list of channel names you are interested in
+    :param packed: true to return a list of lists, false to return a list of dicts
+    :param time: the time for which we are looking for the data
+    :return: a list of dicts with the results.
+    """
+    if not time:
+        raise Exception('Time is required')
+    values = model.objects.get_values_at_time(time, flight_ids, channel_names)
+    if not values:
+        return None
+    if not packed:
+        print 'values time for %s:' % str(model)
+        print str([values.first()])
+        return [values.first()]
+    else:
+        result = get_packed_list(model, [values.first()], channel_names)
         return result
 
 
@@ -238,6 +266,31 @@ def get_flight_values_json(request, packed=True):
         try:
             post_values = unravel_post(request.POST)
             values = get_flight_values_list(post_values.model, post_values.flight_ids, post_values.channel_names, packed=packed)
+            if values:
+                return JsonResponse(values, encoder=DatetimeJsonEncoder, safe=False)
+            else:
+                return JsonResponse({'status': 'error', 'message': 'No values were found.'}, status=204)
+        except Exception as e:
+            return HttpResponseNotAllowed(e.message)
+    return HttpResponseForbidden()
+
+
+def get_flight_values_time_json(request, packed=True):
+    """
+    Returns a JsonResponse of the data values described by the filters in the POST dictionary
+    :param request: the request
+    :request.POST:
+    : model_name: The fully qualified name of the model, ie xgds_braille_app.Environmental
+    : channel_names: The list of channel names you are interested in
+    : flight_ids: The list of flight ids to filter by
+    : time: The nearest time for the data
+    :param packed: true to return a list of lists, false to return a list of dicts
+    :return: a JsonResponse with a list of dicts with all the results
+    """
+    if request.method == 'POST':
+        try:
+            post_values = unravel_post(request.POST)
+            values = get_flight_values_time_list(post_values.model, post_values.flight_ids, post_values.channel_names, packed=packed, time=post_values.time)
             if values:
                 return JsonResponse(values, encoder=DatetimeJsonEncoder, safe=False)
             else:
