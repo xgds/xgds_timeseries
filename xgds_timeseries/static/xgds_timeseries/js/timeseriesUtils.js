@@ -312,7 +312,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 						});
 					}, this);
 
-					if ('flight_ids' in this.postOptions) {
+					if ('flight_ids' in this.postOptions && this.postOptions['stateful'] == "true") {
 						// make sure we have the last data for the flight
 						_this.loadLastFlightData();
 					} else {

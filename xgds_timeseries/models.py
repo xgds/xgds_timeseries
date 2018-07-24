@@ -172,7 +172,6 @@ class TimeSeriesModelManager(models.Manager):
         timestamps_as_list = [timestamps[x] for x in timestamps_keys]
         return timestamps_as_list
 
-
     def get_values(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None, channel_names=None):
         """
         This HITS THE DATABASE to get a QuerySet of dictionaries which includes the timestamps and the

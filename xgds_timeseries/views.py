@@ -49,10 +49,11 @@ def get_time_series_classes_json(request, skip_example=True):
     return JsonResponse(get_time_series_classes(skip_example), safe=False)
 
 
-def get_time_series_classes_and_titles(skip_example=True):
+def get_time_series_classes_metadata(skip_example=True, flight_ids=[]):
     """
     Return a list of dictionaries of time series classes and their titles
     :param skip_example: True to skip the example classes, false otherwise
+    :param flight_ids: an optional list of flight ids; this will check for each timeseries data type for the given flights
     :return: a list of dictionaries
     """
     result = []
@@ -60,8 +61,18 @@ def get_time_series_classes_and_titles(skip_example=True):
     for the_class in TimeSeriesModel.__subclasses__():
         if skip_example and 'xample' in the_class.__name__:  # skip example classes
             continue
-        result.append({'model_name': '%s.%s' % (the_class._meta.app_label, the_class.__name__),
-                      'title': str(the_class.title)})
+
+        if flight_ids:
+            if check_flight_values_exist(the_class, flight_ids):
+                result.append({'model_name': '%s.%s' % (the_class._meta.app_label, the_class.__name__),
+                               'title': str(the_class.title),
+                               'stateful': 'true' if the_class.stateful else 'false'})
+        else:
+            # no flight ids do not filter
+            result.append({'model_name': '%s.%s' % (the_class._meta.app_label, the_class.__name__),
+                           'title': str(the_class.title),
+                           'stateful': 'true' if the_class.stateful else 'false'})
+
     return result
 
 
@@ -225,6 +236,16 @@ def get_values_json(request, packed=True):
         except Exception as e:
             return HttpResponseNotAllowed(e.message)
     return HttpResponseForbidden()
+
+
+def check_flight_values_exist(model, flight_ids):
+    """
+    :param model: the model
+    :param flight_ids: list of flight ids to check
+    :return: Returns true if there are values of this type for all the given flight ids
+    """
+    values = model.objects.get_flight_data(flight_ids)
+    return values.exists()
 
 
 def get_flight_values_list(model, flight_ids, channel_names, packed=True):
