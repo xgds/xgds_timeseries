@@ -245,21 +245,20 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
           });
 	},
 	loadLastFlightData: function() {
+		// this only has to get called for stateful data, so that we at least have a pair of data values to draw a plot line.
 		var _this = this;
 		var options = Object.assign({}, this.postOptions);
 		var flight_end_unix = undefined;
 
 		if (!_.isUndefined(flight_end)) {  // this is defined right now in the html template top level
             options.time = flight_end.format();
-            flight_end_unix = flight_end.unix();
+            flight_end_unix = flight_end.valueOf();
         } else {
 			// can't do this function
 			this.initialized = true;
 			app.vent.trigger('data:loaded', this.postOptions.model_name);
 		}
 
-		console.log('options are');
-		console.log(options);
 		$.ajax({
             url: '/timeseries/values/flight/time/json',
             dataType: 'json',
@@ -267,7 +266,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 			type: 'POST',
             success: $.proxy(function(data) {
                 if (_.isUndefined(data) || data.length === 0){
-                	// this might be fine, if it is not stateful data.  Just go on.
+                	// this might be fine.  Just go on.
                 	this.initialized = true;
 					app.vent.trigger('data:loaded', this.postOptions.model_name);
                 } else {
