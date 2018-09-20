@@ -97,7 +97,10 @@ def unravel_post(post_dict):
     if model_name:
         result.model = getModelByName(model_name)
     result.channel_names = post_dict.getlist('channel_names', None)
-    result.flight_ids = post_dict.getlist('flight_ids[]', None)
+    if 'flight_ids' in post_dict:
+        result.flight_ids = post_dict.getlist('flight_ids', None)
+    elif 'flight_ids[]' in post_dict:
+        result.flight_ids = post_dict.getlist('flight_ids[]', None)
     start_time_string = post_dict.get('start_time', None)
     if start_time_string:
         result.start_time = dateparser(start_time_string)

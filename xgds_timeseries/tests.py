@@ -79,7 +79,7 @@ class xgds_timeseriesTest(TestCase):
         Test that a json response is good, and return its content as a dict
         :param response:
         """
-        self.assertEqual(response.status_code, 200)
+        self.assertEquals(response.status_code, 200)
         self.assertIsInstance(response, JsonResponse)
         string_content = response.content
         self.assertIsNotNone(string_content)
@@ -204,7 +204,7 @@ class xgds_timeseriesTest(TestCase):
         response = self.client.post(reverse('timeseries_min_max_json'),
                                     {'model_name': 'xgds_timeseries.TimeSeriesExample',
                                      'flight_ids': [1, 2, 3]})
-        self.assertEqual(response.status_code, 204)
+        self.assertEquals(response.status_code, 204)
 
     def test_get_min_max_bad_model(self):
         """
