@@ -23,6 +23,7 @@ from django.http import HttpResponseForbidden, Http404, JsonResponse, HttpRespon
 from geocamUtil.loader import getModelByName
 from geocamUtil.datetimeJsonEncoder import DatetimeJsonEncoder
 
+from xgds_core.util import get_all_subclasses
 from xgds_timeseries.models import TimeSeriesModel
 
 
@@ -33,7 +34,7 @@ def get_time_series_classes(skip_example=True):
     :return: a list of [app_label.classname] for classes that extend TimeSeriesModel
     """
     list_result = []
-    for the_class in TimeSeriesModel.__subclasses__():
+    for the_class in get_all_subclasses(TimeSeriesModel):
         if skip_example and 'xample' in the_class.__name__:  # skip example classes
             continue
         list_result.append('%s.%s' % (the_class._meta.app_label, the_class.__name__))
@@ -58,7 +59,7 @@ def get_time_series_classes_metadata(skip_example=True, flight_ids=[]):
     """
     result = []
 
-    for the_class in TimeSeriesModel.__subclasses__():
+    for the_class in get_all_subclasses(TimeSeriesModel):
         if skip_example and 'xample' in the_class.__name__:  # skip example classes
             continue
 
