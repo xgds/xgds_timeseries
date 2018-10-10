@@ -16,7 +16,7 @@
 
 import json
 from django.db import models
-from django.test import TestCase
+from django.test import TransactionTestCase
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseForbidden, Http404, JsonResponse
 
@@ -25,7 +25,7 @@ from xgds_timeseries import views
 from xgds_timeseries.models import TimeSeriesExample
 
 
-class xgds_timeseriesTest(TestCase):
+class xgds_timeseriesTest(TransactionTestCase):
     """
     Tests for xgds_timeseries
     """
