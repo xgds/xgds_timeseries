@@ -50,7 +50,7 @@ def get_time_series_classes_json(request, skip_example=True):
     return JsonResponse(get_time_series_classes(skip_example), safe=False)
 
 
-def get_time_series_classes_metadata(skip_example=True, flight_ids=[]):
+def get_time_series_classes_metadata(skip_example=True, flight_ids=None):
     """
     Return a list of dictionaries of time series classes and their titles
     :param skip_example: True to skip the example classes, false otherwise
@@ -75,6 +75,19 @@ def get_time_series_classes_metadata(skip_example=True, flight_ids=[]):
                            'stateful': 'true' if the_class.stateful else 'false'})
 
     return result
+
+
+def get_time_series_classes_metadata_json(request, skip_example=True):
+    """
+    Return a json response with the list of time series classes metadata
+    :param request: request.POST should contain a list of flight ids
+    :param skip_example: True to skip the example classes, false otherwise
+    :return:
+    """
+    flight_ids = []
+    if 'flight_ids' in request.POST:
+        flight_ids = request.POST.getlist('flight_ids', None)
+    return JsonResponse(get_time_series_classes_metadata(skip_example, flight_ids), safe=False)
 
 
 def unravel_post(post_dict):

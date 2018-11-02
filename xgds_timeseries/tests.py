@@ -59,6 +59,34 @@ class xgds_timeseriesTest(TransactionTestCase):
         self.assertIsNotNone(content)
         self.assertIn('xgds_timeseries.TimeSeriesExample', content)
 
+    def test_get_timeseries_classes_metadata(self):
+        """
+        Test getting the timeseries classes metadata including the example one
+        """
+        result = views.get_time_series_classes_metadata(skip_example=False)
+        self.assertIsInstance(result, list)
+        found_timeseries_example = False
+        for value in result:
+            if value['model_name'] == 'xgds_timeseries.TimeSeriesExample':
+                found_timeseries_example = True
+        self.assertEqual(found_timeseries_example, True)
+
+    def test_get_time_series_classes_metadata_json(self):
+        """
+        Test getting the timeseries classes as a json response
+        """
+        response = self.client.get(reverse('timeseries_classes_metadata_json_example'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response, JsonResponse)
+        content = response.content
+        self.assertIsNotNone(content)
+        json_content = json.loads(content)
+        found_timeseries_example = False
+        for value in json_content:
+            if value['model_name'] == 'xgds_timeseries.TimeSeriesExample':
+                found_timeseries_example = True
+        self.assertEqual(found_timeseries_example, True)
+
     def test_get_timeseries_classes_and_titles(self):
         """
         Test getting the timeseries classes and titles including the example one
