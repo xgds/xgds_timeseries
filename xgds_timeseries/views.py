@@ -84,9 +84,7 @@ def get_time_series_classes_metadata_json(request, skip_example=True):
     :param skip_example: True to skip the example classes, false otherwise
     :return:
     """
-    flight_ids = []
-    if 'flight_ids' in request.POST:
-        flight_ids = request.POST.getlist('flight_ids', None)
+    flight_ids = request.POST.getlist('flight_ids[]', None)
     return JsonResponse(get_time_series_classes_metadata(skip_example, flight_ids), safe=False)
 
 
