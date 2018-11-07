@@ -16,6 +16,8 @@
 
 from django.conf.urls import url
 
+from django.conf import settings
+
 import xgds_timeseries.views as views
 
 urlpatterns = [url(r'^classes/metadata/json$', views.get_time_series_classes_metadata_json, {'skip_example': True},
@@ -26,9 +28,11 @@ urlpatterns = [url(r'^classes/metadata/json$', views.get_time_series_classes_met
                url(r'^classes/example/json$', views.get_time_series_classes_json, {'skip_example': False},
                    'timeseries_classes_json_example'),
                url(r'^min_max/json$', views.get_min_max_json, {}, 'timeseries_min_max_json'),
-               url(r'^values/json$', views.get_values_json, {'packed':False}, 'timeseries_values_json'),
-               url(r'^values/flight/json$', views.get_flight_values_json, {'packed':False}, 'timeseries_flight_values_json'),
-               url(r'^values/flight/time/json$', views.get_flight_values_time_json, {'packed':False}, 'timeseries_flight_time_values_json'),
+               url(r'^values/json$', views.get_values_json, {'packed': False}, 'timeseries_values_json'),
+               url(r'^values/flight/json$', views.get_flight_values_json, {'packed': False}, 'timeseries_flight_values_json'),
+               url(r'^values/flight/time/json$', views.get_flight_values_time_json, {'packed': False}, 'timeseries_flight_time_values_json'),
+               url(r'^values/flight/downsample/json$', views.get_flight_values_json, {'packed': False, 'downsample': settings.XGDS_TIMESERIES_DOWNSAMPLE_DATA_SECONDS}, 'timeseries_flight_values_json'),
+               url(r'^values/flight/time/downsample/json$', views.get_flight_values_time_json, {'packed': False, 'downsample': settings.XGDS_TIMESERIES_DOWNSAMPLE_DATA_SECONDS}, 'timeseries_flight_time_values_json'),
                url(r'^values/list/json$', views.get_values_json, {}, 'timeseries_values_list_json'),
                url(r'^values/flight/list/json$', views.get_flight_values_json, {}, 'timeseries_flight_values_list_json'),
                url(r'^values/flight/time/list/json$', views.get_flight_values_time_json, {}, 'timeseries_flight_values_time_list_json'),

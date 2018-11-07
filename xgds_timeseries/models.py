@@ -19,8 +19,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Min, Max
 
-# TODO support number of samples so that we can express how many samples, or what interval of data we are looking for
-# to limit the number of results we get
+from xgds_core.models import downsample_queryset
 
 
 class ChannelDescription(object):
@@ -28,7 +27,8 @@ class ChannelDescription(object):
     A Channel Description is used by a Time Series Model to describe each channel.
     """
 
-    def __init__(self, label, units=None, global_min=None, global_max=None, interval=None):
+    def __init__(self, label, units=None, global_min=None, global_max=None,
+                 interval=settings.XGDS_TIMESERIES_DOWNSAMPLE_DATA_SECONDS):
         """
         :param label: The label will be shown with plots in the UI
         :param units: The units for the channel, ie meter
@@ -102,27 +102,41 @@ class TimeSeriesModelManager(models.Manager):
         fields.extend(channel_names)
         return fields
 
-    def get_flight_data(self, flight_ids):
+    def get_flight_data(self, flight_ids, downsample=0):
         """
         This returns a QuerySet including the full model instances for the specified flight ids.
         :param flight_ids: list of ids of flights (pks)
+        :param downsample: number of seconds to skip between data samples
         :return: QuerySet with all of the model instances for the specified flight ids
         """
-        return self.filter(flight_id__in=flight_ids)
+        result = self.filter(flight_id__in=flight_ids)
+        result = downsample_queryset(result, downsample, self.model.get_time_field_name())
+        return result
 
-    def get_flight_values(self, flight_ids, channel_names=None):
+    def get_flight_values(self, flight_ids, channel_names=None, downsample=0):
         """
         This HITS THE DATABASE to get a QuerySet of dictionaries which includes the timestamps and the
         values for the specified channels
         :param flight_ids: list of ids of flights (pks)
         :param channel_names: list of names of channels
+        :param downsample: number of seconds to skip between data samples
         :return: A QuerySet of dictionaries of the values which include timestamp and selected channels
         """
-        return self.get_flight_data(flight_ids).values(*self.get_fields(channel_names))
+        return self.get_flight_data(flight_ids, downsample).values(*self.get_fields(channel_names))
 
-    def get_dynamic_flight_values(self, flight_ids, channel_names=None, dynamic_value=None, dynamic_separator=None):
+    def get_dynamic_flight_values(self, flight_ids, channel_names=None, dynamic_value=None, dynamic_separator=None,
+                                  downsample=0):
+        """
+
+        :param flight_ids:
+        :param channel_names:
+        :param dynamic_value:
+        :param dynamic_separator:
+        :param downsample: number of seconds to skip between data samples
+        :return:
+        """
         timestamps = {}
-        query = self.get_flight_data(flight_ids)
+        query = self.get_flight_data(flight_ids, downsample)
         for q in query:
             if q.timestamp not in timestamps:
                 timestamps[q.timestamp] = {
@@ -135,13 +149,14 @@ class TimeSeriesModelManager(models.Manager):
         timestamps_as_list = [timestamps[x] for x in timestamps_keys]
         return timestamps_as_list
 
-    def get_data(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None):
+    def get_data(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None, downsample=0):
         """
         This returns a QuerySet including the full model instances for the specified flight ids and other filters.
         :param start_time: The start time, timezone aware
         :param end_time: The end time, timezone aware
         :param flight_ids: the list of flight ids
         :param filter_dict: A dictionary of other filter terms
+        :param downsample: Number of seconds to downsample or skip when filtering data
         :return: QuerySet with all of the model instances that match the filters
         """
         result = self
@@ -155,11 +170,25 @@ class TimeSeriesModelManager(models.Manager):
             result = result.filter(**filter_dict)
         if filter_dict:
             result = result.filter(**filter_dict)
+
+        result = downsample_queryset(result, downsample, self.model.get_time_field_name())
+
         return result
 
-    def get_dynamic_values(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None, channel_names=None):
+    def get_dynamic_values(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None,
+                           channel_names=None, downsample=0):
+        """
+
+        :param start_time:
+        :param end_time:
+        :param flight_ids:
+        :param filter_dict:
+        :param channel_names:
+        :param downsample:
+        :return:
+        """
         timestamps = {}
-        query = self.get_data(start_time, end_time, flight_ids, filter_dict)
+        query = self.get_data(start_time, end_time, flight_ids, filter_dict, downsample)
         for q in query:
             if q.time_stamp not in timestamps:
                 timestamps[q.time_stamp] = {
@@ -172,7 +201,8 @@ class TimeSeriesModelManager(models.Manager):
         timestamps_as_list = [timestamps[x] for x in timestamps_keys]
         return timestamps_as_list
 
-    def get_values(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None, channel_names=None):
+    def get_values(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None, channel_names=None,
+                   downsample=0):
         """
         This HITS THE DATABASE to get a QuerySet of dictionaries which includes the timestamps and the
         values for the specified channels which match the filter
@@ -183,7 +213,7 @@ class TimeSeriesModelManager(models.Manager):
         :param channel_names: list of names of channels
         :return: A QuerySet of dictionaries of the values which include timestamp and selected channels
         """
-        return self.get_data(start_time, end_time, flight_ids, filter_dict).values(*self.get_fields(channel_names))
+        return self.get_data(start_time, end_time, flight_ids, filter_dict, downsample).values(*self.get_fields(channel_names))
 
     def get_data_at_time(self, time, flight_ids=None, filter_dict=None):
         """
@@ -249,16 +279,16 @@ class TimeSeriesModelManager(models.Manager):
                              'max': filtered_data.aggregate(Max(field))['%s__max' % field]}
         return result
 
-    def get_dynamic_min_max(
-            self, start_time=None, end_time=None, flight_ids=None, filter_dict=None, channel_names=None,
-            dynamic_value=None, dynamic_separator=None,
-    ):
+    def get_dynamic_min_max(self, start_time=None, end_time=None, flight_ids=None, filter_dict=None, channel_names=None,
+                            dynamic_value=None, dynamic_separator=None):
+
         def dynamic_aggregate(field_name, data, func):
             custom_data = [getattr(x, dynamic_value) for x in data if getattr(x, dynamic_separator) == field_name]
             return func(custom_data)
 
         filtered_data = self.get_data(start_time, end_time, flight_ids, filter_dict)
-        if not filtered_data.exists(): return None
+        if not filtered_data.exists():
+            return None
 
         result = {}
         for field in self.get_fields(channel_names):

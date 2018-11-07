@@ -260,7 +260,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 		}
 
 		$.ajax({
-            url: '/timeseries/values/flight/time/json',
+            url: '/timeseries/values/flight/time/downsample/json',
             dataType: 'json',
             data: options,
 			type: 'POST',
@@ -293,7 +293,7 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 	loadData: function(){
 		var _this = this;
 		$.ajax({
-            url: '/timeseries/values/flight/json',
+            url: '/timeseries/values/flight/downsample/json',
             dataType: 'json',
             data: this.postOptions,
 			type: 'POST',

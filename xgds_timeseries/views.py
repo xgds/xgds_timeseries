@@ -18,7 +18,8 @@ import json
 import traceback
 from dateutil.parser import parse as dateparser
 
-from django.http import HttpResponseForbidden, Http404, JsonResponse, HttpResponseNotAllowed
+from django.conf import settings
+from django.http import HttpResponseForbidden, JsonResponse, HttpResponseNotAllowed
 
 from geocamUtil.loader import getModelByName
 from geocamUtil.datetimeJsonEncoder import DatetimeJsonEncoder
@@ -205,7 +206,8 @@ def get_packed_list(model, values, channel_names):
     return packed
 
 
-def get_values_list(model, channel_names, flight_ids, start_time, end_time, filter_dict, packed=True):
+def get_values_list(model, channel_names, flight_ids, start_time, end_time, filter_dict, packed=True,
+                    downsample=settings.XGDS_TIMESERIES_DOWNSAMPLE_DATA_SECONDS):
     """
     Returns a list of dicts of the data values
     :param model: The model to use
@@ -214,13 +216,15 @@ def get_values_list(model, channel_names, flight_ids, start_time, end_time, filt
     :param start_time: datetime of start time
     :param end_time: datetime of end time
     :param filter_dict: a dictionary of any other filter
-    :param packed: true to return a list of lists, false to return a list of dicts
+    :param packed: true to return a list of lists (no keys), false to return a list of dicts
+    :param downsample: Number of seconds to downsample or skip when filtering data
     :return: a list of dicts with the results.
     """
     if hasattr(model, 'dynamic') and model.dynamic:
-        values = model.objects.get_dynamic_values(start_time, end_time, flight_ids, filter_dict, channel_names)
+        values = model.objects.get_dynamic_values(start_time, end_time, flight_ids, filter_dict, channel_names,
+                                                  downsample)
     else:
-        values = model.objects.get_values(start_time, end_time, flight_ids, filter_dict, channel_names)
+        values = model.objects.get_values(start_time, end_time, flight_ids, filter_dict, channel_names, downsample)
 
     if not packed:
         return list(values)
@@ -228,7 +232,8 @@ def get_values_list(model, channel_names, flight_ids, start_time, end_time, filt
         return get_packed_list(model, values, channel_names)
 
 
-def get_values_json(request, packed=True):
+def get_values_json(request, packed=True,
+                    downsample=settings.XGDS_TIMESERIES_DOWNSAMPLE_DATA_SECONDS):
     """
     Returns a JsonResponse of the data values described by the filters in the POST dictionary
     :param request: the request
@@ -239,6 +244,8 @@ def get_values_json(request, packed=True):
     : start_time: Isoformat start time
     : end_time: Isoformat end time
     : filter: Json string of a dictionary to further filter the data
+    :param packed: true to return a list of lists (no keys), false to return a list of dicts
+    :param downsample: Number of seconds to downsample or skip when filtering data
     :return: a JsonResponse with a list of dicts with all the results
     """
     if request.method == 'POST':
@@ -246,7 +253,7 @@ def get_values_json(request, packed=True):
             post_values = unravel_post(request.POST)
             values = get_values_list(post_values.model, post_values.channel_names, post_values.flight_ids,
                                      post_values.start_time, post_values.end_time, post_values.filter_dict,
-                                     packed)
+                                     packed, downsample)
             if values:
                 return JsonResponse(values, encoder=DatetimeJsonEncoder, safe=False)
             else:
@@ -266,12 +273,13 @@ def check_flight_values_exist(model, flight_ids):
     return values.exists()
 
 
-def get_flight_values_list(model, flight_ids, channel_names, packed=True):
+def get_flight_values_list(model, flight_ids, channel_names, packed=True, downsample=0):
     """
     Returns a list of dicts of the data values
     :param model: The model to use
     :param flight_ids: The list of channel names you are interested in
     :param packed: true to return a list of lists, false to return a list of dicts
+    :param downsample: number of seconds to skip between data samples
     :return: a list of dicts with the results.
     """
     if hasattr(model, 'dynamic') and model.dynamic:
@@ -280,9 +288,10 @@ def get_flight_values_list(model, flight_ids, channel_names, packed=True):
             channel_names=model.get_channel_names(),
             dynamic_value=model.dynamic_value,
             dynamic_separator=model.dynamic_separator,
+            downsample=downsample
         )
     else:
-        values = model.objects.get_flight_values(flight_ids, channel_names)
+        values = model.objects.get_flight_values(flight_ids, channel_names, downsample)
     if not packed:
         return list(values)
     else:
@@ -305,15 +314,15 @@ def get_flight_values_time_list(model, flight_ids, channel_names, packed=True, t
     if not values:
         return None
     if not packed:
-        print 'values time for %s:' % str(model)
-        print str([values.first()])
+        # print 'values time for %s:' % str(model)
+        # print str([values.first()])
         return [values.first()]
     else:
         result = get_packed_list(model, [values.first()], channel_names)
         return result
 
 
-def get_flight_values_json(request, packed=True):
+def get_flight_values_json(request, packed=True, downsample =0):
     """
     Returns a JsonResponse of the data values described by the filters in the POST dictionary
     :param request: the request
@@ -322,12 +331,14 @@ def get_flight_values_json(request, packed=True):
     : channel_names: The list of channel names you are interested in
     : flight_ids: The list of flight ids to filter by
     :param packed: true to return a list of lists, false to return a list of dicts
+    :param downsample: number of seconds to skip when getting data samples
     :return: a JsonResponse with a list of dicts with all the results
     """
     if request.method == 'POST':
         try:
             post_values = unravel_post(request.POST)
-            values = get_flight_values_list(post_values.model, post_values.flight_ids, post_values.channel_names, packed=packed)
+            values = get_flight_values_list(post_values.model, post_values.flight_ids, post_values.channel_names,
+                                            packed=packed, downsample=downsample)
             if values:
                 return JsonResponse(values, encoder=DatetimeJsonEncoder, safe=False)
             else:
@@ -337,7 +348,7 @@ def get_flight_values_json(request, packed=True):
     return HttpResponseForbidden()
 
 
-def get_flight_values_time_json(request, packed=True):
+def get_flight_values_time_json(request, packed=True, downsample=0):
     """
     Returns a JsonResponse of the data values described by the filters in the POST dictionary
     :param request: the request
@@ -347,12 +358,14 @@ def get_flight_values_time_json(request, packed=True):
     : flight_ids: The list of flight ids to filter by
     : time: The nearest time for the data
     :param packed: true to return a list of lists, false to return a list of dicts
+    :param downsample: number of seconds to skip between data samples
     :return: a JsonResponse with a list of dicts with all the results
     """
     if request.method == 'POST':
         try:
             post_values = unravel_post(request.POST)
-            values = get_flight_values_time_list(post_values.model, post_values.flight_ids, post_values.channel_names, packed=packed, time=post_values.time)
+            values = get_flight_values_time_list(post_values.model, post_values.flight_ids, post_values.channel_names,
+                                                 packed=packed, time=post_values.time, downsample=downsample)
             if values:
                 return JsonResponse(values, encoder=DatetimeJsonEncoder, safe=False)
             else:

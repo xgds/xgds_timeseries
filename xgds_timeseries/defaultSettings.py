@@ -37,3 +37,7 @@ settings object will not know about the default value!
 
 from geocamUtil.SettingsUtil import getOrCreateArray
 
+# this will modtime the seconds to downsample all data for plots by this amount
+# If it's >= 60, it must be a multiple of 60 to skip minutes.
+# Does not support skipping > 59 minutes.
+XGDS_TIMESERIES_DOWNSAMPLE_DATA_SECONDS = 5
