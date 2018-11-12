@@ -425,9 +425,9 @@ app.views.TimeseriesPlotView = Marionette.View.extend({
 		var labelValue = labelValue.split(' ').join('_');
 		if (value != null && value != undefined){
 			value = value.toFixed(2);
-			$(labelValue).text(value);
+			this.$el.find(labelValue).text(value);
 		} else {
-			$(labelValue).text(BLANKS);
+			this.$el.find(labelValue).text(BLANKS);
 		}
 	},
 	getPlotIndex: function(currentTime){
