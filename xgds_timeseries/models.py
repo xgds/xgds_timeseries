@@ -347,12 +347,14 @@ class TimeSeriesModel(models.Model):
     def get_time_field_name(cls):
         """
         Override this method if the time field is not named timestamp
-        :return:
+        **IMPORTANT** if you override this be sure to change the meta ordering in your class
+        :return: the name of the field
         """
         return 'timestamp'
 
     class Meta:
         abstract = True
+        ordering = ['timestamp']
 
 
 class TimeSeriesExample(TimeSeriesModel):
