@@ -34,6 +34,7 @@ class xgds_timeseriesTest(TransactionTestCase):
     post_dict = {'model_name': 'xgds_timeseries.TimeSeriesExample',
                  'channel_names': ['temperature', 'pressure'],
                  'flight_ids': [22],
+                 'downsample': 0
                  # 'start_time': '2017-11-10T23:15:33.487643Z',
                  # 'end_time': '2017-11-10T23:26:59.594971Z',
                  # 'filter': '{"value__gte":1.2}'
@@ -282,8 +283,9 @@ class xgds_timeseriesTest(TransactionTestCase):
         Test getting filtered values
         """
         response = self.client.post(reverse('timeseries_values_json'),
-                                    {'model_name': 'xgds_timeseries.TimeSeriesExample',
-                                     'filter': '{"humidity__gte":50, "humidity__lte":99}' })
+                                    {'downsample': 0,
+                                     'model_name': 'xgds_timeseries.TimeSeriesExample',
+                                     'filter': '{"humidity__gte":50, "humidity__lte":99}'})
         content = self.is_good_json_response(response, is_list=True)
         self.assertIsNotNone(content)
         self.assertEqual(len(content), 2)
@@ -336,6 +338,17 @@ class xgds_timeseriesTest(TransactionTestCase):
         self.assertEqual(first['timestamp'], '2017-11-10T23:15:01.284000+00:00')
         self.assertEqual(first['temperature'], 8.13)
         self.assertEqual(first['pressure'], 3.98)
+
+    def test_get_flight_values_downsample(self):
+        """
+        Test getting the values downsampled
+        """
+        self.post_dict['downsample']=5
+        response = self.client.post(reverse('timeseries_flight_values_json'), self.post_dict)
+        content = self.is_good_json_response(response, is_list=True)
+        self.assertIsNotNone(content)
+        self.assertEqual(len(content), 21)
+        self.post_dict['downsample'] = 0
 
     def test_get_packed_flight_values_all(self):
         """

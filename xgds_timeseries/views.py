@@ -85,6 +85,7 @@ def get_time_series_classes_metadata_json(request, skip_example=True):
     :param skip_example: True to skip the example classes, false otherwise
     :return:
     """
+    flight_ids = None
     if 'flight_ids' in request.POST:
         flight_ids = request.POST.getlist('flight_ids', None)
     elif 'flight_ids[]' in request.POST:
@@ -106,6 +107,7 @@ def unravel_post(post_dict):
         end_time = None
         filter_dict = None
         time = None
+        downsample = None
 
     result = PostData()
     model_name = post_dict.get('model_name', None)
@@ -130,6 +132,11 @@ def unravel_post(post_dict):
     filter_json = post_dict.get('filter', None)
     if filter_json:
         result.filter_dict = json.loads(filter_json)
+
+    result.downsample = post_dict.get('downsample', None)
+    if result.downsample is not None:
+        result.downsample = int(result.downsample)
+
     return result
 
 
@@ -251,6 +258,8 @@ def get_values_json(request, packed=True,
     if request.method == 'POST':
         try:
             post_values = unravel_post(request.POST)
+            if post_values.downsample is not None:
+                downsample = int(post_values.downsample)
             values = get_values_list(post_values.model, post_values.channel_names, post_values.flight_ids,
                                      post_values.start_time, post_values.end_time, post_values.filter_dict,
                                      packed, downsample)
@@ -322,7 +331,7 @@ def get_flight_values_time_list(model, flight_ids, channel_names, packed=True, t
         return result
 
 
-def get_flight_values_json(request, packed=True, downsample =0):
+def get_flight_values_json(request, packed=True, downsample=0):
     """
     Returns a JsonResponse of the data values described by the filters in the POST dictionary
     :param request: the request
@@ -330,6 +339,7 @@ def get_flight_values_json(request, packed=True, downsample =0):
     : model_name: The fully qualified name of the model, ie xgds_braille_app.Environmental
     : channel_names: The list of channel names you are interested in
     : flight_ids: The list of flight ids to filter by
+    : downsample: number of seconds to downsample by, takes priority
     :param packed: true to return a list of lists, false to return a list of dicts
     :param downsample: number of seconds to skip when getting data samples
     :return: a JsonResponse with a list of dicts with all the results
@@ -337,6 +347,8 @@ def get_flight_values_json(request, packed=True, downsample =0):
     if request.method == 'POST':
         try:
             post_values = unravel_post(request.POST)
+            if post_values.downsample is not None:
+                downsample = int(post_values.downsample)
             values = get_flight_values_list(post_values.model, post_values.flight_ids, post_values.channel_names,
                                             packed=packed, downsample=downsample)
             if values:
@@ -364,6 +376,8 @@ def get_flight_values_time_json(request, packed=True, downsample=0):
     if request.method == 'POST':
         try:
             post_values = unravel_post(request.POST)
+            if post_values.downsample is not None:
+                downsample = int(post_values.downsample)
             values = get_flight_values_time_list(post_values.model, post_values.flight_ids, post_values.channel_names,
                                                  packed=packed, time=post_values.time, downsample=downsample)
             if values:
