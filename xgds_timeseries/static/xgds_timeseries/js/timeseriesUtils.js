@@ -19,502 +19,532 @@ BLANKS = '';
 $(function() {
     app.views = app.views || {};
 
-var ChannelDescriptionModel = Backbone.Model.extend({
+    app.models = app.models || {};
 
-	defaults: {
-		'label': null,
-		'units': null,
-		'global_min': null,
-		'global_max': null,
-		'min': null,
-		'max': null,
-		'interval': null,
-		'lineColor':     'blue',
-		'usesPosition':    false,
-		//'update': UPDATE_ON.UpdatePlanDuration,
-		'inverse': false,
-		'visible': true
-	},
+    (function(models) {
 
-	initialize: function(data) {
-		this.set('label', data['label']);
-		this.set('units', data['units']);
-		this.set('global_min', data['global_min']);
-		this.set('global_max', data['global_max']);
-		this.set('interval', data['interval']);
-		this.set('data', []);
-	},
+        models.ChannelDescriptionModel = Backbone.Model.extend({
 
-	getDataValues: function(startMoment, endMoment, intervalSeconds) {
-		// TODO does not yet use start end or interval
-		return this.data;
-	},
-
-	getLineColor: function() {
-		return this.get('lineColor');
-	},
-
-	getLabel: function() {
-		return this.get('label');
-	}
-
-});
-
-app.views.TimeseriesPlotView = Marionette.View.extend({
-	playback : {
-		lastUpdate: undefined,
-		invalid: false,
-		initialized: false,
-		initialize: function() {
-			if (this.initialized){
-				return;
-			}
-			this.initialized = true;
-		},
-		doSetTime: function(currentTime){
-			if (currentTime === undefined){
-				return;
-			}
-			this.lastUpdate = moment(currentTime);
-			// TODO this is too global. Should just be listening to self.
-			app.vent.trigger('updateTimeseriesTime', currentTime);
-		},
-		start: function(currentTime){
-			this.doSetTime(currentTime);
-		},
-		update: function(currentTime){
-			if (this.lastUpdate === undefined){
-				this.doSetTime(currentTime);
-				return;
-			}
-			var delta = currentTime.diff(this.lastUpdate);
-			if (Math.abs(delta) >= 100) {
-				this.doSetTime(currentTime);
-			}
-		},
-		pause: function() {
-			// noop
-		}
-	},
-	plotOptions: {
-        series: {
-            lines: {show: true},
-            points: {show: false}
-        },
-        clickable: true,
-        grid: {
-            backgroundColor: '#FFFFFF',
-            hoverable: true,
-            clickable: true,
-            autoHighlight: true,
-            margin: {
-                top: 5,
-                left: 0,
-                bottom: 5,
-                right: 0
+            defaults: {
+                'label': null,
+                'units': null,
+                'global_min': null,
+                'global_max': null,
+                'min': null,
+                'max': null,
+                'interval': null,
+                'lineColor':     'blue',
+                'usesPosition':    false,
+                //'update': UPDATE_ON.UpdatePlanDuration,
+                'inverse': false,
+                'visible': true
             },
-            axisMargin: 0,
-            borderWidth: 1,
-            borderColor: '#C0C0C0'
-        },
-        shadowSize: 0,
-        zoom: {
-            interactive: true
-        },
-        pan: {
-            interactive: true
-        },
-        axisLabels: {
-            show: true
-        },
-        yaxis: {
-            ticks: 0 // this line removes the y ticks
-        },
-        xaxis: {
-            mode: 'time',
-            timeformat: DEFAULT_PLOT_TIME_FORMAT,
-            timezone: getTimeZone(),
-            reserveSpace: false
-        },
-		//yaxes: [],
-        legend: {
-            show: false
-        }
-    },
-	skip_keys: ['timestamp','pk'],
-	intervalSeconds: 1, // the interval in seconds between data samples, defaults to 1 second TODO default?
-	template: '#plot_contents',
-	initialized: false,
-	initialize: function(options) {
-		if (_.isEmpty(options)) {
-			this.postOptions = appOptions.plotOptions;  // TODO fix.
-		} else {
-			this.postOptions = options;
-		}
-		if (this.plot != undefined){
-			this.plot.destroy();
-			this.plot = null;
-		}
-		var _this = this;
-		this.model_name = this.postOptions.model_name;
-		app.listenTo(app.vent, 'data:loaded', function(model_name) {
-			if (model_name == _this.model_name){
-				_this.onRender();
-			}
-		});
-		if (this.channel_descriptions === undefined) {
-            this.getChannelDescriptions();
-        } else {
-			this.loadData();
-		}
-		playback.addListener(this.playback);
-		this.listenTo(app.vent, 'updateTimeseriesTime', function(currentTime) {
-			var index = _this.getPlotIndex(currentTime);
-			if (!_.isUndefined((index)) && index > -1){
-				_this.selectData(index);
-			} else {
-				// todo clear
-			}
-		});
 
+            initialize: function(data) {
+                this.set('label', data['label']);
+                this.set('units', data['units']);
+                this.set('global_min', data['global_min']);
+                this.set('global_max', data['global_max']);
+                this.set('interval', data['interval']);
+                this.set('data', []);
+            },
 
-    },
-    clearMessage: function(msg){
-        this.$el.find('#timeseries_message').html('');
-    },
-    setMessage: function(msg){
-        this.$el.find('#timeseries_message').html(msg);
-    },
-    showValue: function(x, y){
-    	var str = this.labels[0] + ": "+ x + "<br/>";
-		xgds_timeseries.setMessage(str);
-    },
-    getChannelDescriptions: function() {
-        $.ajax({
-            url: '/timeseries/channel_descriptions/json',
-            dataType: 'json',
-			type: 'POST',
-            data: this.postOptions,
-            success: $.proxy(function(data) {
-                if (_.isUndefined(data) || data.length === 0){
-                    this.setMessage("None found.");
+            getDataValues: function(startMoment, endMoment, intervalSeconds) {
+                // TODO does not yet use start end or interval
+                return this.data;
+            },
+
+            getLineColor: function() {
+                return this.get('lineColor');
+            },
+
+            getLabel: function() {
+                return this.get('label');
+            }
+
+        });
+
+        models.PlotModel = Backbone.Model.extend({
+            initialized: false,
+            skip_keys: ['timestamp','pk'],
+            intervalSeconds: 1, // the interval in seconds between data samples, defaults to 1 second TODO default?
+            initialize: function(options) {
+                this.postOptions = options;
+                this.model_name = options.model_name;
+                if (this.channel_descriptions === undefined) {
+                    this.getChannelDescriptions();
                 } else {
-                	this.channel_descriptions = {};
-                    for (var channel in data){
-                    	this.channel_descriptions[channel] = new ChannelDescriptionModel(data[channel]);
-                    	this.loadLegendCookie(channel);
-                    	if ('interval' in data && !_.isNull(data.interval)){
-                    		this.intervalSeconds = data.interval;
-						}
-					}
-					this.getMinMax();
+                    this.loadData();
                 }
-            }, this),
-            error: $.proxy(function(data){
-                this.setMessage("Channel descriptions failed.");
-            }, this)
-          });
-    },
-	getMinMax: function() {
-		$.ajax({
-            url: '/timeseries/min_max/json',
-            dataType: 'json',
-			type: 'POST',
-            data: this.postOptions,
-            success: $.proxy(function(data) {
-                if (_.isUndefined(data) || data.length === 0){
-                    this.setMessage("None found.");
-                } else {
-
-                    for (var channel in data){
-                    	if (!this.skip_keys.includes(channel)) {
-                    		this.channel_descriptions[channel].set('min', data[channel].min);
-                            this.channel_descriptions[channel].set('max', data[channel].max);
+            },
+            getChannelDescriptions: function() {
+                $.ajax({
+                    url: '/timeseries/channel_descriptions/json',
+                    dataType: 'json',
+                    type: 'POST',
+                    data: this.postOptions,
+                    success: $.proxy(function(data) {
+                        if (_.isUndefined(data) || data.length === 0){
+                            this.trigger('setMessage', "None found.");
+                        } else {
+                            this.channel_descriptions = {};
+                            for (var channel in data){
+                                this.channel_descriptions[channel] = new app.models.ChannelDescriptionModel(data[channel]);
+                                this.loadLegendCookie(channel);
+                                if ('interval' in data && !_.isNull(data.interval)){
+                                    this.intervalSeconds = data.interval;
+                                }
+                            }
+                            this.getMinMax();
                         }
-					}
-					this.time_range = data['timestamp'];
-                    this.time_range.duration = moment(this.time_range.max).diff(this.time_range.min, 'seconds');
-                    this.time_range.start = moment(this.time_range.min);
+                    }, this),
+                    error: $.proxy(function(data){
+                        this.trigger('setMessage', "Channel descriptions failed.");
+                    }, this)
+                });
+            },
+            getMinMax: function() {
+                $.ajax({
+                    url: '/timeseries/min_max/json',
+                    dataType: 'json',
+                    type: 'POST',
+                    data: this.postOptions,
+                    success: $.proxy(function(data) {
+                        if (_.isUndefined(data) || data.length === 0){
+                            this.trigger('setMessage', "None found.");
+                        } else {
+
+                            for (var channel in data){
+                                if (!this.skip_keys.includes(channel)) {
+                                    this.channel_descriptions[channel].set('min', data[channel].min);
+                                    this.channel_descriptions[channel].set('max', data[channel].max);
+                                }
+                            }
+                            this.time_range = data['timestamp'];
+                            this.time_range.duration = moment(this.time_range.max).diff(this.time_range.min, 'seconds');
+                            this.time_range.start = moment(this.time_range.min);
+                            this.loadData();
+                        }
+                    }, this),
+                    error: $.proxy(function(data){
+                        this.trigger('setMessage', "MinMax failed.");
+                    }, this)
+                });
+            },
+            loadLastFlightData: function() {
+                // this only has to get called for stateful data, so that we at least have a pair of data values to draw a plot line.
+                var _this = this;
+                var options = Object.assign({}, this.postOptions);
+                var flight_end_unix = undefined;
+
+                if (!_.isUndefined(flight_end)) {  // this is defined right now in the html template top level
+                    options.time = flight_end.format();
+                    flight_end_unix = flight_end.valueOf();
+                } else {
+                    // can't do this function
+                    this.initialized = true;
+                    app.vent.trigger('data:loaded', this.postOptions.model_name);
+                }
+
+                $.ajax({
+                    url: '/timeseries/values/flight/time/downsample/json',
+                    dataType: 'json',
+                    data: options,
+                    type: 'POST',
+                    success: $.proxy(function(data) {
+                        if (_.isUndefined(data) || data.length === 0){
+                            // this might be fine.  Just go on.
+                            this.initialized = true;
+                            app.vent.trigger('data:loaded', this.postOptions.model_name);
+                        } else {
+                            this.trigger('clearMessage');
+                            _.each(data, function(data_block) {
+                                var the_time = moment(data_block['timestamp']).valueOf();
+                                _.each(Object.keys(this.channel_descriptions), function(field_name, index, list){
+                                    var data_array = _this.channel_descriptions[field_name].get('data');
+                                    var datum = data_block[field_name];
+                                    // we looked up this data to see what was the value at the end time, if we got data back then it is to be used for this end time.
+                                    data_array.push([flight_end_unix, datum]);
+                                });
+                            }, this);
+
+                            this.initialized = true;
+                            app.vent.trigger('data:loaded', this.postOptions.model_name);
+                        }
+                    }, this),
+                    error: $.proxy(function(data){
+                        this.setMessage("Search failed.");
+                    }, this)
+                });
+            },
+            loadData: function(){
+                var _this = this;
+                $.ajax({
+                    url: '/timeseries/values/flight/downsample/json',
+                    dataType: 'json',
+                    data: this.postOptions,
+                    type: 'POST',
+                    success: $.proxy(function(data) {
+                        if (_.isUndefined(data) || data.length === 0){
+                            this.trigger('setMessage', "None found.");
+                        } else {
+                            this.trigger('clearMessage');
+                            _.each(data, function(data_block) {
+                                var the_time = moment(data_block['timestamp']).valueOf();
+                                _.each(Object.keys(this.channel_descriptions), function(field_name, index, list){
+                                    var data_array = _this.channel_descriptions[field_name].get('data');
+                                    var datum = data_block[field_name]
+                                    data_array.push([the_time, datum]);
+                                });
+                            }, this);
+
+                            if ('flight_ids' in this.postOptions && this.postOptions['stateful'] == "true") {
+                                // make sure we have the last data for the flight
+                                _this.loadLastFlightData();
+                            } else {
+                                this.initialized = true;
+                                app.vent.trigger('data:loaded', this.postOptions.model_name);
+                            }
+                        }
+                    }, this),
+                    error: $.proxy(function(data){
+                        this.trigger('setMessage', "Search failed.");
+                    }, this)
+                });
+            },
+            buildPlotDataArray: function() {
+                if (_.isUndefined(this.plot_data_array)) {
+                    this.plot_data_array = [];
+                    _.each(Object.keys(this.channel_descriptions), function (channel) {
+                        var cd = this.channel_descriptions[channel];
+                        if (cd.get('visible')) {
+                            var channel_dict = {label: cd.get('label'), data: cd.get('data'), channel: channel};
+                            var color = cd.get('color');
+                            if (!_.isUndefined(color)) {
+                                channel_dict['color'] = color;
+                            }
+                            this.plot_data_array.push(channel_dict);
+                        }
+                    }, this);
+                }
+                return this.plot_data_array;
+            },
+            getPlotIndex: function(currentTime, sampleData){
+                if (!this.initialized) {
+                    return;
+                }
+
+                var shouldUpdate = true;
+                if (!_.isUndefined(this.lastDataIndexTime)) {
+                    var timedeltaMS = Math.abs(this.lastDataIndexTime - currentTime);
+                    if (timedeltaMS / 1000 < this.intervalSeconds) {
+                        shouldUpdate = false;
+                    }
+                }
+
+                if (shouldUpdate) {
                     var context = this;
-					this.loadData();
-                }
-            }, this),
-            error: $.proxy(function(data){
-                this.setMessage("MinMax failed.");
-            }, this)
-          });
-	},
-	loadLastFlightData: function() {
-		// this only has to get called for stateful data, so that we at least have a pair of data values to draw a plot line.
-		var _this = this;
-		var options = Object.assign({}, this.postOptions);
-		var flight_end_unix = undefined;
+                    var foundIndex = _.findIndex(sampleData, function(value){
+                        return Math.abs((currentTime - value[0])/1000) < context.intervalSeconds;
+                    });
 
-		if (!_.isUndefined(flight_end)) {  // this is defined right now in the html template top level
-            options.time = flight_end.format();
-            flight_end_unix = flight_end.valueOf();
-        } else {
-			// can't do this function
-			this.initialized = true;
-			app.vent.trigger('data:loaded', this.postOptions.model_name);
-		}
+                    if (this.lastDataIndex !== foundIndex){
+                        // now verify the actual time at that index
+                        var testData = sampleData[foundIndex];
+                        if (_.isUndefined(testData)) {
+                            return undefined;
+                        }
+                        var testDiff = Math.abs((currentTime - testData[0])/1000)
+                        if (testDiff > this.intervalSeconds) {
+                            console.log('BOO bad time ' + testDiff);
+                            //TODO find better time.  This may easily happen if we have data dropouts.
+                            return undefined; // not sure what to do
+                        }
 
-		$.ajax({
-            url: '/timeseries/values/flight/time/downsample/json',
-            dataType: 'json',
-            data: options,
-			type: 'POST',
-            success: $.proxy(function(data) {
-                if (_.isUndefined(data) || data.length === 0){
-                	// this might be fine.  Just go on.
-                	this.initialized = true;
-					app.vent.trigger('data:loaded', this.postOptions.model_name);
-                } else {
-                	this.clearMessage();
-					_.each(data, function(data_block) {
-						var the_time = moment(data_block['timestamp']).valueOf();
-						_.each(Object.keys(this.channel_descriptions), function(field_name, index, list){
-							var data_array = _this.channel_descriptions[field_name].get('data');
-							var datum = data_block[field_name];
-							// we looked up this data to see what was the value at the end time, if we got data back then it is to be used for this end time.
-							data_array.push([flight_end_unix, datum]);
-						});
-					}, this);
-
-					this.initialized = true;
-					app.vent.trigger('data:loaded', this.postOptions.model_name);
-                }
-            }, this),
-            error: $.proxy(function(data){
-                this.setMessage("Search failed.");
-            }, this)
-          });
-	},
-	loadData: function(){
-		var _this = this;
-		$.ajax({
-            url: '/timeseries/values/flight/downsample/json',
-            dataType: 'json',
-            data: this.postOptions,
-			type: 'POST',
-            success: $.proxy(function(data) {
-                if (_.isUndefined(data) || data.length === 0){
-                    this.setMessage("None found.");
-                } else {
-                	this.clearMessage();
-					_.each(data, function(data_block) {
-						var the_time = moment(data_block['timestamp']).valueOf();
-						_.each(Object.keys(this.channel_descriptions), function(field_name, index, list){
-							var data_array = _this.channel_descriptions[field_name].get('data');
-							var datum = data_block[field_name]
-							data_array.push([the_time, datum]);
-						});
-					}, this);
-
-					if ('flight_ids' in this.postOptions && this.postOptions['stateful'] == "true") {
-						// make sure we have the last data for the flight
-						_this.loadLastFlightData();
-					} else {
-                        this.initialized = true;
-                        app.vent.trigger('data:loaded', this.postOptions.model_name);
+                        this.lastDataIndex = foundIndex;
+                        this.lastDataIndexTime = currentTime;
                     }
                 }
-            }, this),
-            error: $.proxy(function(data){
-                this.setMessage("Search failed.");
-            }, this)
-          });
-	},
-    togglePlot(channel, visible){
-		var cd = this.channel_descriptions[channel];
-		if (cd.get('visible') != visible){
-			cd.set('visible', visible);
-			this.onRender();
-		}
-	},
-	drawTitle: function() {
-		this.$el.find("#plotTitle").html('&nbsp;&nbsp;&nbsp;<strong>' + this.postOptions.title + '</strong>')
-	},
-	getCookieKey: function(channel) {
-		return this.model_name + '.' + channel;
-	},
-	loadLegendCookie: function(channel) {
-		var cookieKey = this.getCookieKey(channel);
-		var cookieVisible = Cookies.get(cookieKey);
-		var visible = true;
-		if (!_.isUndefined(cookieVisible)){
-			visible = (cookieVisible == 'true');
-		} else {
-			Cookies.set(cookieKey, visible);
-		}
-		this.channel_descriptions[channel].set('visible', visible);
-		return visible;
-	},
-    drawLegendLabels: function() {
-		var context = this;
-		var plotLegend = this.$el.find("#plotLegend");
-		var keys = Object.keys(this.channel_descriptions);
-		_.each(Object.keys(this.channel_descriptions), function(channel) {
-			var cd = context.channel_descriptions[channel];
-			var underChannel = channel.split(' ').join('_');
+                return this.lastDataIndex;
+            },
+            getCookieKey: function(channel) {
+                return this.model_name + '.' + channel;
+            },
+            loadLegendCookie: function(channel) {
+                var cookieKey = this.getCookieKey(channel);
+                var cookieVisible = Cookies.get(cookieKey);
+                var visible = true;
+                if (!_.isUndefined(cookieVisible)){
+                    visible = (cookieVisible == 'true');
+                } else {
+                    Cookies.set(cookieKey, visible);
+                }
+                this.channel_descriptions[channel].set('visible', visible);
+                return visible;
+            },
+        })
 
-			var content = '<div id="' + underChannel + 'legend_div" class="d-sm-inline-flex flex-row" style="min-width:180px;">';
-			content += '<label><input type="checkbox" id="' + underChannel + '_checkbox" value="' + channel +
-				'" style="display:inline-block;" class="mr-1"><span id="' + underChannel + '_label" style="color:' +
-				cd.get('color') + '">' + cd.get('label') + ':</span><span id="' + underChannel + '_value">' +
-				BLANKS + '</span>';
-			if (cd.get('units') !== null) {
-				content += '<span id="\' + underChannel + \'_units">&nbsp;' + cd.get('units') + '</span>';
+    })(app.models);
+
+    app.views.TimeseriesPlotView = Marionette.View.extend({
+        playback : {
+            lastUpdate: undefined,
+            invalid: false,
+            initialized: false,
+            initialize: function() {
+                if (this.initialized){
+                    return;
+                }
+                this.initialized = true;
+            },
+            doSetTime: function(currentTime){
+                if (currentTime === undefined){
+                    return;
+                }
+                this.lastUpdate = moment(currentTime);
+                // TODO this is too global. Should just be listening to self.
+                app.vent.trigger('updateTimeseriesTime', currentTime);
+            },
+            start: function(currentTime){
+                this.doSetTime(currentTime);
+            },
+            update: function(currentTime){
+                if (this.lastUpdate === undefined){
+                    this.doSetTime(currentTime);
+                    return;
+                }
+                var delta = currentTime.diff(this.lastUpdate);
+                if (Math.abs(delta) >= 100) {
+                    this.doSetTime(currentTime);
+                }
+            },
+            pause: function() {
+                // noop
             }
-			content += '</label></div>';
-			plotLegend.append(content);
-
-			var checkboxId = "#" + underChannel + "_checkbox";
-			$(checkboxId).prop('checked', cd.get('visible'));
-
-			$(checkboxId).change(function() {
-				var id = $(this).attr('id');
-				var checked = $(this).is(":checked");
-				Cookies.set(context.getCookieKey($(this).attr('value')), checked);
-				context.togglePlot($(this).attr('value'), checked);
-			});
-
-		});
-	},
-	buildPlotDataArray: function() {
-		var result = [];
-		_.each(Object.keys(this.channel_descriptions), function(channel) {
-			var cd = this.channel_descriptions[channel];
-			if (cd.get('visible')) {
-				var channel_dict = {label: cd.get('label'), data: cd.get('data'), channel: channel};
-				var color = cd.get('color');
-				if (!_.isUndefined(color)) {
-					channel_dict['color'] = color;
-				}
-                result.push(channel_dict);
+        },
+        plotOptions: {
+            series: {
+                lines: {show: true},
+                points: {show: false}
+            },
+            clickable: true,
+            grid: {
+                backgroundColor: '#FFFFFF',
+                hoverable: true,
+                clickable: true,
+                autoHighlight: true,
+                margin: {
+                    top: 5,
+                    left: 0,
+                    bottom: 5,
+                    right: 0
+                },
+                axisMargin: 0,
+                borderWidth: 1,
+                borderColor: '#C0C0C0'
+            },
+            shadowSize: 0,
+            zoom: {
+                interactive: true
+            },
+            pan: {
+                interactive: true
+            },
+            axisLabels: {
+                show: true
+            },
+            yaxis: {
+                ticks: 0 // this line removes the y ticks
+            },
+            xaxis: {
+                mode: 'time',
+                timeformat: DEFAULT_PLOT_TIME_FORMAT,
+                timezone: getTimeZone(),
+                reserveSpace: false
+            },
+            //yaxes: [],
+            legend: {
+                show: false
             }
-		}, this);
-        return result;
-	},
-	selectData: function(index) {
-		if (this.plot != undefined){
-			this.plot.unhighlight();
-			var time = null;
-			var context = this;
-			_.each(this.plot.getData(), function(plotData, i) {
-				var channel = plotData.channel;
-				var value = null;
-				if (!_.isUndefined(channel)) {
-					var dataAtIndex = plotData.data[index];
-					if (!_.isUndefined(dataAtIndex)) {
-						context.plot.highlight(i, index);
-						time = dataAtIndex[0];
-						value = dataAtIndex[1];
+        },
+        template: '#plot_contents',
+        initialize: function(options) {
+            if (_.isEmpty(options)) {
+                options = appOptions.plotOptions;
+            } else {
+                if ('model' in options) {
+                    this.model = options.model
+                }
+            }
+            this.model_name = options.model_name;
+            this.title = options.title;
+            if (_.isUndefined(this.model)){
+                this.model = new app.models.PlotModel(options);
+            }
+
+            this.model.on('clearMessage', this.clearMessage);
+            this.model.on('setMessage', function(message) {this.setMessage(message);});
+
+            if (this.plot != undefined){
+                this.plot.destroy();
+                this.plot = null;
+            }
+
+            playback.addListener(this.playback);
+            this.listenTo(app.vent, 'updateTimeseriesTime', function(currentTime) {
+                var sampleData = this.plot.getData()[0].data;
+                var index = _this.model.getPlotIndex(currentTime, sampleData);
+                if (!_.isUndefined((index)) && index > -1){
+                    _this.selectData(index);
+                } else {
+                    // todo clear
+                }
+            });
+
+            if (this.model.initialized){
+                this.onRender();
+            } else {
+                var _this = this;
+                app.listenTo(app.vent, 'data:loaded', function(model_name) {
+                    if (model_name == _this.model_name){
+                        _this.onRender();
                     }
-                    context.updateDataValue(channel, value);
-				}
-			});
-			if (!_.isNull(time)) {
-				this.updateTimeValue(time);
-			}
-		}
-	},
-	updateDataValue: function(label, value){
-		// show the value from the plot below the plot.
-		var labelValue = ('#' + label + '_value');
-		var labelValue = labelValue.split(' ').join('_');
-		if (value != null && value != undefined){
-			value = value.toFixed(2);
-			this.$el.find(labelValue).text(value);
-		} else {
-			this.$el.find(labelValue).text(BLANKS);
-		}
-	},
-	getPlotIndex: function(currentTime){
-		if (!this.initialized) {
-			return;
-		}
-
-		var shouldUpdate = true;
-		if (!_.isUndefined(this.lastDataIndexTime)) {
-            var timedeltaMS = Math.abs(this.lastDataIndexTime - currentTime);
-            if (timedeltaMS / 1000 < this.intervalSeconds) {
-                shouldUpdate = false;
+                });
             }
+        },
+        clearMessage: function(msg){
+            if (!_.isUndefined(this.$el)) {
+                this.$el.find('#timeseries_message').html('');
+            }
+        },
+        setMessage: function(msg){
+            this.$el.find('#timeseries_message').html(msg);
+        },
+        showValue: function(x, y){
+            var str = this.labels[0] + ": "+ x + "<br/>";
+            xgds_timeseries.setMessage(str);
+        },
+        togglePlot(channel, visible){
+            var cd = this.channel_descriptions[channel];
+            if (cd.get('visible') != visible){
+                cd.set('visible', visible);
+                this.onRender();
+            }
+        },
+        drawTitle: function() {
+            this.$el.find("#plotTitle").html('&nbsp;&nbsp;&nbsp;<strong>' + this.title + '</strong>')
+        },
+
+        drawLegendLabels: function() {
+            var context = this;
+            var plotLegend = this.$el.find("#plotLegend");
+            _.each(Object.keys(this.model.channel_descriptions), function(channel) {
+                var cd = context.model.channel_descriptions[channel];
+                var underChannel = channel.split(' ').join('_');
+
+                var content = '<div id="' + underChannel + 'legend_div" class="d-sm-inline-flex flex-row" style="min-width:180px;">';
+                content += '<label><input type="checkbox" id="' + underChannel + '_checkbox" value="' + channel +
+                    '" style="display:inline-block;" class="mr-1"><span id="' + underChannel + '_label" style="color:' +
+                    cd.get('color') + '">' + cd.get('label') + ':</span><span id="' + underChannel + '_value">' +
+                    BLANKS + '</span>';
+                if (cd.get('units') !== null) {
+                    content += '<span id="\' + underChannel + \'_units">&nbsp;' + cd.get('units') + '</span>';
+                }
+                content += '</label></div>';
+                plotLegend.append(content);
+
+                var checkboxId = "#" + underChannel + "_checkbox";
+                $(checkboxId).prop('checked', cd.get('visible'));
+
+                $(checkboxId).change(function() {
+                    var id = $(this).attr('id');
+                    var checked = $(this).is(":checked");
+                    Cookies.set(context.model.getCookieKey($(this).attr('value')), checked);
+                    context.togglePlot($(this).attr('value'), checked);
+                });
+
+            });
+        },
+
+        selectData: function(index) {
+            if (this.plot != undefined){
+                this.plot.unhighlight();
+                var time = null;
+                var context = this;
+                _.each(this.plot.getData(), function(plotData, i) {
+                    var channel = plotData.channel;
+                    var value = null;
+                    if (!_.isUndefined(channel)) {
+                        var dataAtIndex = plotData.data[index];
+                        if (!_.isUndefined(dataAtIndex)) {
+                            context.plot.highlight(i, index);
+                            time = dataAtIndex[0];
+                            value = dataAtIndex[1];
+                        }
+                        context.updateDataValue(channel, value);
+                    }
+                });
+                if (!_.isNull(time)) {
+                    this.updateTimeValue(time);
+                }
+            }
+        },
+        updateDataValue: function(label, value){
+            // show the value from the plot below the plot.
+            var labelValue = ('#' + label + '_value');
+            var labelValue = labelValue.split(' ').join('_');
+            if (value != null && value != undefined){
+                value = value.toFixed(2);
+                this.$el.find(labelValue).text(value);
+            } else {
+                this.$el.find(labelValue).text(BLANKS);
+            }
+        },
+        updateTimeValue: function(newTime){
+            //TODO update the time for the slider maybe
+        },
+        rendering: false,
+        onRender: function() {
+            if (this.rendering || !this.model.initialized) {
+                return;
+            }
+            this.rendering = true;
+            var plotDiv = this.$el.find("#plotDiv");
+            if (this.plot == undefined) {
+                this.drawTitle();
+
+                this.plot = $.plot(plotDiv, this.model.buildPlotDataArray(), this.plotOptions);
+                var context = this;
+                // get the colors
+                var keys = Object.keys( this.model.channel_descriptions );
+                _.each(this.plot.getData(), function(data, index){
+                    this.model.channel_descriptions[keys[index]].set('color', data.color);
+                }, this);
+
+                // draw the legend labels
+                this.drawLegendLabels();
+
+                // hook up the click and hover
+                plotDiv.bind("plotclick", function (event, pos, item) {
+                    context.selectData(item.dataIndex);
+                });
+                plotDiv.bind("plothover", function (event, pos, item) {
+                    if (item != null){
+                        context.selectData(item.dataIndex);
+                    }
+                });
+                // this.$el.resize(function(event) {context.handleResize();});
+            } else {
+                var plotOptions = this.plot.getOptions();
+                //plotOptions.xaxis.timeformat = this.plotOptions.xaxis.timeformat;
+                //plotOptions.colors = this.getPlotColors();
+                this.plot.setupGrid();
+                this.plot.setData(this.model.buildPlotDataArray());
+                this.plot.draw();
+            }
+            this.rendering = false;
         }
 
-		if (shouldUpdate) {
-			var context = this;
-			var sampleData = this.plot.getData()[0].data;
-			var foundIndex = _.findIndex(sampleData, function(value){
-				return Math.abs((currentTime - value[0])/1000) < context.intervalSeconds;
-			});
-
-			if (this.lastDataIndex !== foundIndex){
-				// now verify the actual time at that index
-				var testData = sampleData[foundIndex];
-				if (_.isUndefined(testData)) {
-					return undefined;
-				}
-				var testDiff = Math.abs((currentTime - testData[0])/1000)
-				if (testDiff > this.intervalSeconds) {
-					console.log('BOO bad time ' + testDiff);
-					//TODO find better time.  This may easily happen if we have data dropouts.
-					return undefined; // not sure what to do
-				}
-
-				this.lastDataIndex = foundIndex;
-				this.lastDataIndexTime = currentTime;
-			}
-		}
-		return this.lastDataIndex;
-	},
-
-	updateTimeValue: function(newTime){
-		//TODO update the time for the slider maybe
-	},
-	rendering: false,
-    onRender: function() {
-		if (this.rendering || !this.initialized) {
-			return;
-		}
-		this.rendering = true;
-		var plotDiv = this.$el.find("#plotDiv");
-		if (this.plot == undefined) {
-			this.drawTitle();
-
-			this.plot = $.plot(plotDiv, this.buildPlotDataArray(), this.plotOptions);
-			var context = this;
-			// get the colors
-			var keys = Object.keys( this.channel_descriptions );
-			_.each(this.plot.getData(), function(data, index){
-				this.channel_descriptions[keys[index]].set('color', data.color);
-			}, this);
-
-			// draw the legend labels
-			this.drawLegendLabels();
-
-			// hook up the click and hover
-			plotDiv.bind("plotclick", function (event, pos, item) {
-				context.selectData(item.dataIndex);
-			});
-			plotDiv.bind("plothover", function (event, pos, item) {
-				if (item != null){
-					context.selectData(item.dataIndex);
-				}
-			});
-			// this.$el.resize(function(event) {context.handleResize();});
-		} else {
-			var plotOptions = this.plot.getOptions();
-			//plotOptions.xaxis.timeformat = this.plotOptions.xaxis.timeformat;
-			//plotOptions.colors = this.getPlotColors();
-			this.plot.setupGrid();
-			this.plot.setData(this.buildPlotDataArray());
-			this.plot.draw();
-		}
-		this.rendering = false;
-	}
-
-});
+    });
 
 });
