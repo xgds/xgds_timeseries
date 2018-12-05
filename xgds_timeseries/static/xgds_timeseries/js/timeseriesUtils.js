@@ -246,9 +246,13 @@ $(function() {
                 if (shouldUpdate) {
                     var context = this;
                     var foundIndex = _.findIndex(sampleData, function(value){
-                        return Math.abs((currentTime.valueOf() - value[0])/1000) < context.intervalSeconds;
+                        var delta = Math.abs(currentTime.valueOf() - value[0])/1000;
+                        return delta < context.intervalSeconds;
                     });
 
+                    if (foundIndex == -1) {
+                        return undefined;
+                    }
                     if (this.lastDataIndex !== foundIndex){
                         // now verify the actual time at that index
                         var testData = sampleData[foundIndex];
@@ -399,6 +403,7 @@ $(function() {
                     _this.selectData(index);
                 } else {
                     // todo clear
+                    _this.clearData();
                 }
             });
 
@@ -467,6 +472,12 @@ $(function() {
             });
         },
 
+        clearData: function() {
+            this.plot.unhighlight();
+            _.each(Object.keys(this.model.channel_descriptions), function(key) {
+                this.updateDataValue(key);
+            }, this);
+        },
         selectData: function(index) {
             if (this.plot != undefined){
                 this.plot.unhighlight();
