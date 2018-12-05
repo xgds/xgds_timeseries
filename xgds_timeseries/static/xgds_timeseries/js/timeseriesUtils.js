@@ -18,7 +18,6 @@ BLANKS = '';
 
 $(function() {
     app.views = app.views || {};
-
     app.models = app.models || {};
 
     (function(models) {
@@ -375,15 +374,14 @@ $(function() {
         template: '#plot_contents',
         initialize: function(options) {
             if (_.isEmpty(options)) {
-                options = appOptions.plotOptions;
-            } else {
-                if ('model' in options) {
-                    this.model = options.model
-                }
+                options = app.options.plotOptions;
             }
+
             this.model_name = options.model_name;
             this.title = options.title;
-            if (_.isUndefined(this.model)){
+            if (!_.isUndefined(app.plot_models_initialized) && app.plot_models_initialized){
+                this.model = app.plot_models[options.model_name];
+            } else {
                 this.model = new app.models.PlotModel(options);
             }
 
