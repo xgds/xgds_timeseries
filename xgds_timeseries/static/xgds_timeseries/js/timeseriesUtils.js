@@ -65,13 +65,53 @@ $(function() {
 
         });
 
+        var PlotPlayback =  {
+                lastUpdate: undefined,
+                invalid: false,
+                initialized: false,
+                initialize: function() {
+                    if (this.initialized){
+                        return;
+                    }
+                    this.initialized = true;
+                },
+                doSetTime: function(currentTime){
+                    if (currentTime === undefined){
+                        return;
+                    }
+                    this.lastUpdate = moment(currentTime);
+                    // TODO this is too global. Should just be listening to self.
+                    app.vent.trigger('updateTimeseriesTime:' + this.model_name, currentTime);
+                },
+                start: function(currentTime){
+                    this.doSetTime(currentTime);
+                },
+                update: function(currentTime){
+                    if (this.lastUpdate === undefined){
+                        this.doSetTime(currentTime);
+                        return;
+                    }
+                    var delta = currentTime.diff(this.lastUpdate);
+                    if (Math.abs(delta) >= 100) {
+                        this.doSetTime(currentTime);
+                    }
+                },
+                pause: function() {
+                    // noop
+                }
+            };
         models.PlotModel = Backbone.Model.extend({
             initialized: false,
             skip_keys: ['timestamp','pk'],
-            intervalSeconds: 1, // the interval in seconds between data samples, defaults to 1 second TODO default?
+            intervalSeconds: 1,
+            buildPlayback: function() {
+                this.playback = _.clone(PlotPlayback);
+                this.playback.model_name = this.model_name;
+            },
             initialize: function(options) {
                 this.postOptions = options;
                 this.model_name = options.model_name;
+                this.buildPlayback();
                 if (this.channel_descriptions === undefined) {
                     this.getChannelDescriptions();
                 } else {
@@ -203,6 +243,7 @@ $(function() {
                                 _this.loadLastFlightData();
                             } else {
                                 this.initialized = true;
+                                playback.addListener(this.playback);
                                 app.vent.trigger('data:loaded', this.postOptions.model_name);
                             }
                         }
@@ -291,41 +332,7 @@ $(function() {
     })(app.models);
 
     app.views.TimeseriesPlotView = Marionette.View.extend({
-        playback : {
-            lastUpdate: undefined,
-            invalid: false,
-            initialized: false,
-            initialize: function() {
-                if (this.initialized){
-                    return;
-                }
-                this.initialized = true;
-            },
-            doSetTime: function(currentTime){
-                if (currentTime === undefined){
-                    return;
-                }
-                this.lastUpdate = moment(currentTime);
-                // TODO this is too global. Should just be listening to self.
-                app.vent.trigger('updateTimeseriesTime', currentTime);
-            },
-            start: function(currentTime){
-                this.doSetTime(currentTime);
-            },
-            update: function(currentTime){
-                if (this.lastUpdate === undefined){
-                    this.doSetTime(currentTime);
-                    return;
-                }
-                var delta = currentTime.diff(this.lastUpdate);
-                if (Math.abs(delta) >= 100) {
-                    this.doSetTime(currentTime);
-                }
-            },
-            pause: function() {
-                // noop
-            }
-        },
+
         plotOptions: {
             series: {
                 lines: {show: true},
@@ -381,8 +388,6 @@ $(function() {
             this.title = options.title;
             if (!_.isUndefined(app.plot_models_initialized) && app.plot_models_initialized){
                 this.model = app.plot_models[options.model_name];
-            } else {
-                this.model = new app.models.PlotModel(options);
             }
 
             this.model.on('clearMessage', this.clearMessage);
@@ -393,8 +398,7 @@ $(function() {
                 this.plot = null;
             }
 
-            playback.addListener(this.playback);
-            this.listenTo(app.vent, 'updateTimeseriesTime', function(currentTime) {
+            this.listenTo(app.vent, 'updateTimeseriesTime:' + this.model_name, function(currentTime) {
                 var sampleData = this.plot.getData()[0].data;
                 var index = _this.model.getPlotIndex(currentTime, sampleData);
                 if (!_.isUndefined((index)) && index > -1){
@@ -405,12 +409,15 @@ $(function() {
                 }
             });
 
-            if (this.model.initialized){
+            if (!_.isUndefined(this.model) && this.model.initialized){
                 this.onRender();
             } else {
                 var _this = this;
                 app.listenTo(app.vent, 'data:loaded', function(model_name) {
                     if (model_name == _this.model_name){
+                        if (_.isUndefined(_this.model)){
+                             _this.model = app.plot_models[model_name];
+                        }
                         _this.onRender();
                     }
                 });
@@ -553,6 +560,91 @@ $(function() {
                 this.plot.draw();
             }
             this.rendering = false;
+        }
+
+    });
+
+    app.views.TimeseriesValueView = Marionette.View.extend({
+        template: '#template-data-value-table',
+        table_setup: false,
+        initialize: function(options) {
+            if (_.isEmpty(options)) {
+                options = app.options.plotOptions;
+            }
+
+            this.model_name = options.model_name;
+            this.title = options.title;
+            // the model must be initialized in the app
+            if (!_.isUndefined(app.plot_models_initialized) && app.plot_models_initialized){
+                this.model = app.plot_models[options.model_name];
+            }
+
+            //this.listenTo(app.vent, 'updateTimeseriesTime:' + this.model_name, function(currentTime) {
+            //     var sampleData = this.plot.getData()[0].data;
+            //     var index = _this.model.getPlotIndex(currentTime, sampleData);
+            //     if (!_.isUndefined((index)) && index > -1){
+            //         _this.selectData(index);
+            //     } else {
+            //         // todo clear
+            //         _this.clearData();
+            //     }
+            // });
+
+
+        },
+        showValue: function(x, y){
+            var str = this.labels[0] + ": "+ x + "<br/>";
+            xgds_timeseries.setMessage(str);
+        },
+        onAttach: function() {
+            if (!_.isUndefined(this.model) && this.model.initialized){
+                this.setupTable();
+            } else {
+                var _this = this;
+                app.listenTo(app.vent, 'data:loaded', function(model_name) {
+                    if (model_name == _this.model_name){
+                        _this.setupTable();
+                    }
+                });
+            }
+        },
+         setupTable: function() {
+            if (this.table_setup){
+                return;
+            }
+            if (_.isUndefined(this.model)){
+                this.model = app.plot_models[this.model_name];
+            }
+
+            var context = this;
+            var append_to = this.$el.find('.plot-value-tbody');
+            var content = '<tr>';
+            var col_count = 0;
+            _.each(Object.keys(this.model.channel_descriptions), function(channel) {
+                var cd = context.model.channel_descriptions[channel];
+                var underChannel = channel.split(' ').join('_');
+
+                content += '<td id="' + underChannel + 'value_label" ><strong>';
+                content += cd.get('label');
+                content += ':</strong>&nbsp;</td>';
+                content += '<td id="' + underChannel + 'value_td" >';
+                content += '<span id="' + underChannel + 'value_value">' + BLANKS + '</span>';
+                if (cd.get('units') !== null) {
+                    content += '<span id="' + underChannel + 'value_units">' + cd.get('units') + '</span>';
+                }
+                content += '</td>';
+                col_count += 2;
+            });
+            content += '</tr>';
+            append_to.append(content);
+
+            append_to = this.$el.find('.plot-value-thead');
+            content = '<tr>';
+            content +='<td colspan=' + col_count + '>' + this.title + '</td>';
+            content += '</tr>';
+            append_to.append(content);
+            this.table_setup = true;
+
         }
 
     });
