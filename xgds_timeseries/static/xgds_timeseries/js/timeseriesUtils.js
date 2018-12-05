@@ -32,7 +32,7 @@ $(function() {
                 'global_max': null,
                 'min': null,
                 'max': null,
-                'interval': null,
+                'interval': 1,
                 'lineColor':     'blue',
                 'usesPosition':    false,
                 //'update': UPDATE_ON.UpdatePlanDuration,
@@ -45,7 +45,9 @@ $(function() {
                 this.set('units', data['units']);
                 this.set('global_min', data['global_min']);
                 this.set('global_max', data['global_max']);
-                this.set('interval', data['interval']);
+                if ('interval' in data && !_.isNull(data.interval)) {
+                    this.set('interval', data['interval']);
+                }
                 this.set('data', []);
             },
 
@@ -89,11 +91,10 @@ $(function() {
                         } else {
                             this.channel_descriptions = {};
                             for (var channel in data){
-                                this.channel_descriptions[channel] = new app.models.ChannelDescriptionModel(data[channel]);
+                                var cd = new app.models.ChannelDescriptionModel(data[channel]);
+                                this.channel_descriptions[channel] = cd;
+                                this.intervalSeconds = cd.get('interval');
                                 this.loadLegendCookie(channel);
-                                if ('interval' in data && !_.isNull(data.interval)){
-                                    this.intervalSeconds = data.interval;
-                                }
                             }
                             this.getMinMax();
                         }
@@ -245,7 +246,7 @@ $(function() {
                 if (shouldUpdate) {
                     var context = this;
                     var foundIndex = _.findIndex(sampleData, function(value){
-                        return Math.abs((currentTime - value[0])/1000) < context.intervalSeconds;
+                        return Math.abs((currentTime.valueOf() - value[0])/1000) < context.intervalSeconds;
                     });
 
                     if (this.lastDataIndex !== foundIndex){
