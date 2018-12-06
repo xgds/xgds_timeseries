@@ -529,7 +529,7 @@ $(function() {
             //TODO update the time for the slider maybe
         },
         rendering: false,
-        onRender: function() {
+        onAttach: function() {
             if (!_.isUndefined(this.model) && this.model.initialized){
                 this.renderPlots();
             } else {
