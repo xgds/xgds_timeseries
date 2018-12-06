@@ -392,7 +392,7 @@ $(function() {
                 show: false
             }
         },
-        template: '#plot_contents',
+        template: '#timeseries_plot_contents',
         initialize: function(options) {
             if (_.isEmpty(options)) {
                 options = app.options.plotOptions;
