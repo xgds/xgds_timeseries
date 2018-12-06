@@ -421,11 +421,13 @@ $(function() {
         setupModel: function() {
             if (_.isUndefined(this.model)) {
                 if (!_.isUndefined(app.plot_models_initialized) && app.plot_models_initialized) {
-                    this.model = app.plot_models[options.model_name];
-                    this.model.on('clearMessage', this.clearMessage);
-                    this.model.on('setMessage', function (message) {
-                        this.setMessage(message);
-                    });
+                    this.model = app.plot_models[this.model_name];
+                    if (_.isUndefined(this.model)) {
+                        this.model.on('clearMessage', this.clearMessage);
+                        this.model.on('setMessage', function (message) {
+                            this.setMessage(message);
+                        });
+                    }
                 }
             }
         },
