@@ -400,18 +400,15 @@ $(function() {
 
             this.model_name = options.model_name;
             this.title = options.title;
-            if (!_.isUndefined(app.plot_models_initialized) && app.plot_models_initialized){
-                this.model = app.plot_models[options.model_name];
-            }
+            this.setupModel();
 
-            this.model.on('clearMessage', this.clearMessage);
-            this.model.on('setMessage', function(message) {this.setMessage(message);});
 
             if (this.plot != undefined){
                 this.plot.destroy();
                 this.plot = null;
             }
 
+            var _this = this;
             this.listenTo(app.vent, 'updateTimeseriesValue:' + this.model_name, function(index) {
                 if (!_.isUndefined((index)) && index > -1){
                     _this.selectData(index);
@@ -420,6 +417,17 @@ $(function() {
                 }
             });
 
+        },
+        setupModel: function() {
+            if (_.isUndefined(this.model)) {
+                if (!_.isUndefined(app.plot_models_initialized) && app.plot_models_initialized) {
+                    this.model = app.plot_models[options.model_name];
+                    this.model.on('clearMessage', this.clearMessage);
+                    this.model.on('setMessage', function (message) {
+                        this.setMessage(message);
+                    });
+                }
+            }
         },
         clearMessage: function(msg){
             if (!_.isUndefined(this.$el)) {
@@ -526,9 +534,7 @@ $(function() {
                 var _this = this;
                 app.listenTo(app.vent, 'data:loaded', function(model_name) {
                     if (model_name == _this.model_name){
-                        if (_.isUndefined(_this.model)){
-                             _this.model = app.plot_models[model_name];
-                        }
+                        _this.setupModel();
                         _this.renderPlots();
                     }
                 });
@@ -538,10 +544,8 @@ $(function() {
             if (!app.plot_models_initialized) {
                 return;
             }
-            if (_.isUndefined(this.model)){
-                this.model = app.plot_models[this.model_name];
-            }
-            if (this.rendering || !this.model.initialized) {
+            this.setupModel();
+            if (this.rendering || _.isUndefined(this.model) || !this.model.initialized) {
                 return;
             }
             this.rendering = true;
