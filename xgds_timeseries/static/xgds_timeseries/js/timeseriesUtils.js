@@ -65,7 +65,7 @@ $(function() {
 
         });
 
-        var PlotPlayback =  {
+        var PlotPlayback = {
                 lastUpdate: undefined,
                 invalid: false,
                 initialized: false,
@@ -80,7 +80,6 @@ $(function() {
                         return;
                     }
                     this.lastUpdate = moment(currentTime);
-                    // TODO this is too global. Should just be listening to self.
                     app.vent.trigger('updateTimeseriesTime:' + this.model_name, currentTime);
                 },
                 start: function(currentTime){
@@ -104,6 +103,7 @@ $(function() {
             initialized: false,
             skip_keys: ['timestamp','pk'],
             intervalSeconds: 1,
+            cached_index: undefined,
             buildPlayback: function() {
                 this.playback = _.clone(PlotPlayback);
                 this.playback.model_name = this.model_name;
@@ -117,6 +117,18 @@ $(function() {
                 } else {
                     this.loadData();
                 }
+
+                var _this = this;
+                this.listenTo(app.vent, 'updateTimeseriesTime:' + this.model_name, function(currentTime) {
+                    var index = _this.getPlotIndex(currentTime);
+                    if (!_.isUndefined((index)) && index > -1){
+                        _this.cached_index = index;
+                    } else {
+                        _this.cached_index = undefined;
+                    }
+                    app.vent.trigger('updateTimeseriesValue:' + _this.model_name, _this.cached_index);
+
+                });
             },
             getChannelDescriptions: function() {
                 $.ajax({
@@ -270,7 +282,7 @@ $(function() {
                 }
                 return this.plot_data_array;
             },
-            getPlotIndex: function(currentTime, sampleData){
+            getPlotIndex: function(currentTime){
                 if (!this.initialized) {
                     return;
                 }
@@ -285,8 +297,10 @@ $(function() {
 
                 if (shouldUpdate) {
                     var context = this;
+                    var sampleData = this.buildPlotDataArray()[0].data;
+                    var currentTimeValue = currentTime.valueOf();
                     var foundIndex = _.findIndex(sampleData, function(value){
-                        var delta = Math.abs(currentTime.valueOf() - value[0])/1000;
+                        var delta = Math.abs(currentTimeValue - value[0])/1000;
                         return delta < context.intervalSeconds;
                     });
 
@@ -398,30 +412,14 @@ $(function() {
                 this.plot = null;
             }
 
-            this.listenTo(app.vent, 'updateTimeseriesTime:' + this.model_name, function(currentTime) {
-                var sampleData = this.plot.getData()[0].data;
-                var index = _this.model.getPlotIndex(currentTime, sampleData);
+            this.listenTo(app.vent, 'updateTimeseriesValue:' + this.model_name, function(index) {
                 if (!_.isUndefined((index)) && index > -1){
                     _this.selectData(index);
                 } else {
-                    // todo clear
                     _this.clearData();
                 }
             });
 
-            if (!_.isUndefined(this.model) && this.model.initialized){
-                this.onRender();
-            } else {
-                var _this = this;
-                app.listenTo(app.vent, 'data:loaded', function(model_name) {
-                    if (model_name == _this.model_name){
-                        if (_.isUndefined(_this.model)){
-                             _this.model = app.plot_models[model_name];
-                        }
-                        _this.onRender();
-                    }
-                });
-            }
         },
         clearMessage: function(msg){
             if (!_.isUndefined(this.$el)) {
@@ -439,7 +437,7 @@ $(function() {
             var cd = this.channel_descriptions[channel];
             if (cd.get('visible') != visible){
                 cd.set('visible', visible);
-                this.onRender();
+                this.renderPlots();
             }
         },
         drawTitle: function() {
@@ -522,6 +520,27 @@ $(function() {
         },
         rendering: false,
         onRender: function() {
+            if (!_.isUndefined(this.model) && this.model.initialized){
+                this.renderPlots();
+            } else {
+                var _this = this;
+                app.listenTo(app.vent, 'data:loaded', function(model_name) {
+                    if (model_name == _this.model_name){
+                        if (_.isUndefined(_this.model)){
+                             _this.model = app.plot_models[model_name];
+                        }
+                        _this.renderPlots();
+                    }
+                });
+            }
+        },
+        renderPlots: function() {
+            if (!app.plot_models_initialized) {
+                return;
+            }
+            if (_.isUndefined(this.model)){
+                this.model = app.plot_models[this.model_name];
+            }
             if (this.rendering || !this.model.initialized) {
                 return;
             }
@@ -579,22 +598,37 @@ $(function() {
                 this.model = app.plot_models[options.model_name];
             }
 
-            //this.listenTo(app.vent, 'updateTimeseriesTime:' + this.model_name, function(currentTime) {
-            //     var sampleData = this.plot.getData()[0].data;
-            //     var index = _this.model.getPlotIndex(currentTime, sampleData);
-            //     if (!_.isUndefined((index)) && index > -1){
-            //         _this.selectData(index);
-            //     } else {
-            //         // todo clear
-            //         _this.clearData();
-            //     }
-            // });
+            var _this = this;
+            this.listenTo(app.vent, 'updateTimeseriesValue:' + this.model_name, function(index) {
+                if (!_.isUndefined((index)) && index > -1){
+                    _this.showData(index);
+                } else {
+                    _this.clearData();
+                }
+            });
 
 
         },
-        showValue: function(x, y){
-            var str = this.labels[0] + ": "+ x + "<br/>";
-            xgds_timeseries.setMessage(str);
+        clearData: function() {
+            var plot_data_array = this.model.buildPlotDataArray();
+            var _this = this;
+            _.each(plot_data_array, function(channel_dict) {
+                var channel = channel_dict.channel;
+                _this.$el.find("#" + channel + 'value_value').html(BLANKS);
+            });
+        },
+        showData: function(index){
+            var plot_data_array = this.model.buildPlotDataArray();
+            var _this = this;
+            _.each(plot_data_array, function(channel_dict) {
+                var values = channel_dict.data[index];
+                var channel = channel_dict.channel;
+                var print_value = values[1];
+                if (_.isNumber(print_value)){
+                    print_value = print_value.toFixed(2);
+                }
+                _this.$el.find("#" + channel + 'value_value').html(print_value);
+            });
         },
         onAttach: function() {
             if (!_.isUndefined(this.model) && this.model.initialized){
@@ -630,7 +664,7 @@ $(function() {
                 content += '<td id="' + underChannel + 'value_td" >';
                 content += '<span id="' + underChannel + 'value_value">' + BLANKS + '</span>';
                 if (cd.get('units') !== null) {
-                    content += '<span id="' + underChannel + 'value_units">' + cd.get('units') + '</span>';
+                    content += '&nbsp;<span id="' + underChannel + 'value_units">' + cd.get('units') + '</span>';
                 }
                 content += '</td>';
                 col_count += 2;
