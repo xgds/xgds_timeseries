@@ -241,14 +241,24 @@ $(function() {
                             this.trigger('setMessage', "None found.");
                         } else {
                             this.trigger('clearMessage');
+                            var last_time = null;
+                            var skip_count = 0;
                             _.each(data, function(data_block) {
                                 var the_time = moment(data_block['timestamp']).valueOf();
                                 _.each(Object.keys(this.channel_descriptions), function(field_name, index, list){
                                     var data_array = _this.channel_descriptions[field_name].get('data');
-                                    var datum = data_block[field_name]
+                                    var datum = data_block[field_name];
+                                    if (!_.isNull(last_time) && (the_time - last_time)/1000 > _this.channel_descriptions[field_name].get('interval')) {
+                                        if (!_.isNull(data_array[data_array.length-1])) {
+                                            data_array.push(null);
+                                            skip_count += 1;
+                                        }
+                                    }
                                     data_array.push([the_time, datum]);
                                 });
+                                last_time = the_time;
                             }, this);
+                            // console.log(this.postOptions.model_name + " SKIPPED " + skip_count);
 
                             if ('flight_ids' in this.postOptions && this.postOptions['stateful'] == "true") {
                                 // make sure we have the last data for the flight
@@ -271,7 +281,9 @@ $(function() {
                     _.each(Object.keys(this.channel_descriptions), function (channel) {
                         var cd = this.channel_descriptions[channel];
                         if (cd.get('visible')) {
-                            var channel_dict = {label: cd.get('label'), data: cd.get('data'), channel: channel};
+                            var channel_dict = {label: cd.get('label'),
+                                                data: cd.get('data'),
+                                                channel: channel};
                             var color = cd.get('color');
                             if (!_.isUndefined(color)) {
                                 channel_dict['color'] = color;
