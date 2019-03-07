@@ -312,6 +312,9 @@ $(function() {
                     var sampleData = this.buildPlotDataArray()[0].data;
                     var currentTimeValue = currentTime.valueOf();
                     var foundIndex = _.findIndex(sampleData, function(value){
+                        if (_.isNull(value)){
+                            return -1;
+                        }
                         var delta = Math.abs(currentTimeValue - value[0])/1000;
                         return delta < context.intervalSeconds;
                     });
@@ -322,7 +325,7 @@ $(function() {
                     if (this.lastDataIndex !== foundIndex){
                         // now verify the actual time at that index
                         var testData = sampleData[foundIndex];
-                        if (_.isUndefined(testData)) {
+                        if (_.isUndefined(testData) || _.isNull(testData)) {
                             return undefined;
                         }
                         var testDiff = Math.abs((currentTime - testData[0])/1000)
