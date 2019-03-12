@@ -18,6 +18,8 @@ import datetime
 from django.conf import settings
 from django.db import models
 from django.db.models import Min, Max
+from django.utils import timezone
+
 
 from xgds_core.models import downsample_queryset
 
@@ -306,6 +308,8 @@ class TimeSeriesModelManager(models.Manager):
 
 
 class TimeSeriesModel(models.Model):
+
+    creation_time = models.DateTimeField(blank=True, default=timezone.now, editable=False, db_index=True)
 
     objects = TimeSeriesModelManager()
     channel_descriptions = {}
