@@ -356,6 +356,13 @@ class TimeSeriesModel(models.Model):
         """
         return 'timestamp'
 
+    def to_dict(self):
+        time_field_name = self.get_time_field_name()
+        returned_dict = {time_field_name: getattr(self, time_field_name)}
+        for name in self.get_channel_names():
+            returned_dict[name] = getattr(self, name)
+        return returned_dict
+
     class Meta:
         abstract = True
         ordering = ['timestamp']
