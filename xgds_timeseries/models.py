@@ -21,7 +21,7 @@ from django.db.models import Min, Max
 from django.utils import timezone
 
 
-from xgds_core.models import downsample_queryset
+from xgds_core.models import downsample_queryset, BroadcastMixin
 
 
 class ChannelDescription(object):
@@ -307,7 +307,7 @@ class TimeSeriesModelManager(models.Manager):
         return result
 
 
-class TimeSeriesModel(models.Model):
+class TimeSeriesModel(models.Model, BroadcastMixin):
 
     creation_time = models.DateTimeField(blank=True, default=timezone.now, editable=False, db_index=True)
 
