@@ -622,6 +622,8 @@ $(function() {
 
             var _this = this;
             this.listenTo(app.vent, 'updateTimeseriesValue:' + this.model_name, function(index) {
+                // only change the time series if not in live or play flag is false
+                if ('live' in app.options && app.options.live && playback.playFlag) return;
                 if (!_.isUndefined((index)) && index > -1){
                     _this.showData(index);
                 } else {
@@ -639,7 +641,7 @@ $(function() {
                 _this.$el.find("#" + channel + 'value_value').html(BLANKS);
             });
         },
-        showData: function(index){
+        showData: function(index) {
             var plot_data_array = this.model.buildPlotDataArray();
             var _this = this;
             _.each(plot_data_array, function(channel_dict) {
@@ -675,16 +677,24 @@ $(function() {
                 // only update if we are in live mode
                 if (!('live' in app.options && app.options.live)) return;
 
+                // only update if play flag is true
+                if (!playback.playFlag) return;
+
                 for (let key in data) {
                     // each container in the telemetry row file had an id of 
                     // key + value_value
                     let container = $("#" + key + "value_value");
                     if (container.length > 0) {
                         // if this container exists, update the value
-                        container.html(data[key]);
+                        let n = Math.round(parseFloat(data[key]));
+                        // console.log(n);
+                        if (!isNaN(parseFloat(n)) && isFinite(n))
+                        {
+                            container.html(n);
+                        }
                     } 
                 }
-            });
+            }.bind(this));
         },
          setupTable: function() {
             if (this.table_setup){
