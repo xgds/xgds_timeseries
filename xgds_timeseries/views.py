@@ -68,12 +68,16 @@ def get_time_series_classes_metadata(skip_example=True, flight_ids=None):
             if check_flight_values_exist(the_class, flight_ids):
                 result.append({'model_name': '%s.%s' % (the_class._meta.app_label, the_class.__name__),
                                'title': str(the_class.title),
-                               'stateful': 'true' if the_class.stateful else 'false'})
+                               'stateful': 'true' if the_class.stateful else 'false',
+                               'sse_type': the_class.getSseType(),
+                               })
         else:
             # no flight ids do not filter
             result.append({'model_name': '%s.%s' % (the_class._meta.app_label, the_class.__name__),
                            'title': str(the_class.title),
-                           'stateful': 'true' if the_class.stateful else 'false'})
+                           'stateful': 'true' if the_class.stateful else 'false',
+                           'sse_type': the_class.getSseType(),
+                           })
 
     return result
 

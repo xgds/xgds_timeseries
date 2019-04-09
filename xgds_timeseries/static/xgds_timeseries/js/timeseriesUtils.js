@@ -613,6 +613,7 @@ $(function() {
             }
 
             this.model_name = options.model_name;
+            
             this.title = options.title;
             // the model must be initialized in the app
             if (!_.isUndefined(app.plot_models_initialized) && app.plot_models_initialized){
@@ -663,6 +664,22 @@ $(function() {
                 });
             }
         },
+        autoUpdateTable: function() {
+            app.vent.on('timeSeriesSSE', function(data) {
+                // only respond if this message was intended for us
+                if (data.model_name != this.model_name) return;
+
+                // only update if we are in live mode
+                if (!('live' in app.options && app.options.live)) return;
+
+                for (let key in data) {
+                    let container = $("#" + key + "value_value");
+                    if (container.length > 0) {
+                        container.html(data[key]);
+                    } 
+                }
+            });
+        },
          setupTable: function() {
             if (this.table_setup){
                 return;
@@ -699,7 +716,7 @@ $(function() {
             content += '</tr>';
             append_to.append(content);
             this.table_setup = true;
-
+            this.autoUpdateTable();
         }
 
     });
