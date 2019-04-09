@@ -680,14 +680,15 @@ $(function() {
                 // only update if play flag is true
                 if (!playback.playFlag) return;
 
+                let clean_model_name = data.model_name.replace(/\./g, "_") + "-value-container";
+
                 for (let key in data) {
                     // each container in the telemetry row file had an id of 
                     // key + value_value
-                    let container = $("#" + key + "value_value");
+                    let container = $("#" + clean_model_name + " #" + key + "value_value");
                     if (container.length > 0) {
                         // if this container exists, update the value
                         let n = Math.round(parseFloat(data[key]));
-                        // console.log(n);
                         if (!isNaN(parseFloat(n)) && isFinite(n))
                         {
                             container.html(n);
