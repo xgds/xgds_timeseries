@@ -665,7 +665,10 @@ $(function() {
             }
         },
         autoUpdateTable: function() {
-            app.vent.on('timeSeriesSSE', function(data) {
+            // events here are triggered by replayDataPlotsView
+            app.vent.on('timeSeriesSSE', 
+            // data = time series model name, time and information
+            function(data) {
                 // only respond if this message was intended for us
                 if (data.model_name != this.model_name) return;
 
@@ -673,8 +676,11 @@ $(function() {
                 if (!('live' in app.options && app.options.live)) return;
 
                 for (let key in data) {
+                    // each container in the telemetry row file had an id of 
+                    // key + value_value
                     let container = $("#" + key + "value_value");
                     if (container.length > 0) {
+                        // if this container exists, update the value
                         container.html(data[key]);
                     } 
                 }
