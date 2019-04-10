@@ -129,6 +129,8 @@ $(function() {
                     app.vent.trigger('updateTimeseriesValue:' + _this.model_name, _this.cached_index);
 
                 });
+
+                this.subscribeToSSE();
             },
             getChannelDescriptions: function() {
                 $.ajax({
@@ -293,6 +295,45 @@ $(function() {
                     }, this);
                 }
                 return this.plot_data_array;
+            },
+            getIndexInPlotDataArray: function(channel) {
+                for (let i = 0; i < this.plot_data_array.length; i++)
+                {
+                    if (this.plot_data_array[i].channel == channel) return i;
+                }
+                return -1;
+            },
+            addDataToArray: function(channel, timestamp, value) {
+                if (!this.plot_data_array) {
+                    this.buildPlotDataArray();
+                    console.log("Warning: plot data array is undefined and therefore no data has been added");
+                    return;
+                }
+                
+                let index = this.getIndexInPlotDataArray(channel);
+                if (index == -1) {
+                    console.log("Warning: no channel exists for the provided input");
+                    return;
+                }
+
+                // only add the data IF it is a new sample (timestamp > the latest saved timestamp)
+                let length =  this.plot_data_array[index].data.length;
+                if (length == 0) return;
+                if (timestamp - this.plot_data_array[index].data[length - 1][0] >= 1.0)
+                    this.plot_data_array[index].data.push([timestamp, value]);
+            },
+            subscribeToSSE: function() {
+                app.vent.on('timeSeriesSSE', function(data) {
+                    if (data.model_name != this.model_name) return;
+                    for (let key in data) {
+                        if (key == "model_name" || key == "timestamp") continue;
+                        this.addDataToArray(
+                            key, 
+                            moment.utc(data.timestamp.substring(0, 23), "YYYY-MM-DDTHH:mm:ss.SSS").valueOf() / 1000.0, 
+                            data[key]
+                        );
+                    }
+                }.bind(this));
             },
             getPlotIndex: function(currentTime){
                 if (!this.initialized) {
