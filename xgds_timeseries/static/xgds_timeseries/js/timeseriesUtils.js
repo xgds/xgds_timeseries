@@ -729,10 +729,13 @@ $(function() {
                     let container = $("#" + clean_model_name + " #" + key + "value_value");
                     if (container.length > 0) {
                         // if this container exists, update the value
-                        let n = Math.round(parseFloat(data[key]));
-                        if (!isNaN(parseFloat(n)) && isFinite(n))
-                        {
-                            container.html(n);
+                        let n = parseFloat(data[key]);
+                        if (!isNaN(parseFloat(n)) && isFinite(n)) {
+                            if (key.includes("temperature")) {
+                                container.html(n.toFixed(1));
+                            } else {
+                                container.html(n.toFixed(0));
+                            }
                         }
                     } 
                 }
