@@ -500,7 +500,7 @@ $(function() {
             xgds_timeseries.setMessage(str);
         },
         togglePlot(channel, visible){
-            var cd = this.channel_descriptions[channel];
+            var cd = this.model.channel_descriptions[channel];
             if (cd.get('visible') != visible){
                 cd.set('visible', visible);
                 this.renderPlots();
