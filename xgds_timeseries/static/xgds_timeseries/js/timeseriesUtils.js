@@ -526,10 +526,8 @@ $(function() {
             _.each(Object.keys(this.model.channel_descriptions), function(channel) {
                 var cd = context.model.channel_descriptions[channel];
                 var underChannel = channel.split(' ').join('_');
-
                 var content = '<div id="' + underChannel + 'legend_div" class="d-sm-inline-flex flex-row" style="min-width:180px;">';
-                content += '<label><input type="checkbox" id="' + underChannel + '_checkbox" value="' + channel +
-                    '" style="display:inline-block;" class="mr-1"><span id="' + underChannel + '_label" style="color:' +
+                content += '<label><span id="' + underChannel + '_label" style="color:' +
                     cd.get('color') + '">' + cd.get('label') + ':</span><span id="' + underChannel + '_value">' +
                     BLANKS + '</span>';
                 if (cd.get('units') !== null) {
@@ -537,17 +535,6 @@ $(function() {
                 }
                 content += '</label></div>';
                 plotLegend.append(content);
-
-                var checkboxId = "#" + underChannel + "_checkbox";
-                $(checkboxId).prop('checked', cd.get('visible'));
-
-                $(checkboxId).change(function() {
-                    var id = $(this).attr('id');
-                    var checked = $(this).is(":checked");
-                    Cookies.set(context.model.getCookieKey($(this).attr('value')), checked);
-                    context.togglePlot($(this).attr('value'), checked);
-                });
-
             });
         },
 
