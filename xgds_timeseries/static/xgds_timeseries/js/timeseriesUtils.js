@@ -231,6 +231,14 @@ $(function() {
                     }, this)
                 });
             },
+            reloadData: function() {
+                _.each(Object.keys(this.channel_descriptions), function(field_name, index, list) {
+
+                    this.channel_descriptions[field_name].set('data', []);
+
+                }.bind(this));
+                this.loadData();
+            },
             loadData: function(){
                 var _this = this;
                 $.ajax({
@@ -245,6 +253,7 @@ $(function() {
                             this.trigger('clearMessage');
                             var last_time = null;
                             var skip_count = 0;
+
                             _.each(data, function(data_block) {
                                 var the_time = moment(data_block['timestamp']).valueOf();
                                 _.each(Object.keys(this.channel_descriptions), function(field_name, index, list){
@@ -252,7 +261,7 @@ $(function() {
                                     var datum = data_block[field_name];
                                     if (!_.isNull(last_time) && (the_time - last_time)/1000 > _this.channel_descriptions[field_name].get('interval')) {
                                         if (!_.isNull(data_array[data_array.length-1])) {
-                                            data_array.push(null);
+                                            // data_array.push(null);
                                             skip_count += 1;
                                         }
                                     }
@@ -260,7 +269,6 @@ $(function() {
                                 });
                                 last_time = the_time;
                             }, this);
-                            // console.log(this.postOptions.model_name + " SKIPPED " + skip_count);
 
                             if ('flight_ids' in this.postOptions && this.postOptions['stateful'] == "true") {
                                 // make sure we have the last data for the flight
@@ -352,7 +360,8 @@ $(function() {
                     var context = this;
                     var sampleData = this.buildPlotDataArray()[0].data;
                     var currentTimeValue = currentTime.valueOf();
-                    var foundIndex = _.findIndex(sampleData, function(value){
+
+                    var foundIndex = _.findIndex(sampleData, function(value) {
                         if (_.isNull(value)){
                             return -1;
                         }
@@ -363,6 +372,7 @@ $(function() {
                     if (foundIndex == -1) {
                         return undefined;
                     }
+                    return foundIndex;
                     if (this.lastDataIndex !== foundIndex){
                         // now verify the actual time at that index
                         var testData = sampleData[foundIndex];
@@ -631,11 +641,10 @@ $(function() {
                         context.selectData(item.dataIndex);
                     }
                 });
-                // this.$el.resize(function(event) {context.handleResize();});
+
+                this.plot.draw();
             } else {
                 var plotOptions = this.plot.getOptions();
-                //plotOptions.xaxis.timeformat = this.plotOptions.xaxis.timeformat;
-                //plotOptions.colors = this.getPlotColors();
                 this.plot.setupGrid();
                 this.plot.setData(this.model.buildPlotDataArray());
                 this.plot.draw();
@@ -741,6 +750,11 @@ $(function() {
                 }
             }.bind(this));
         },
+        autoReloadTable: function() {
+            app.vent.on('pauseButtonPressed', function() {
+                this.model.reloadData();
+            }.bind(this));
+        },
          setupTable: function() {
             if (this.table_setup){
                 return;
@@ -778,6 +792,7 @@ $(function() {
             append_to.append(content);
             this.table_setup = true;
             this.autoUpdateTable();
+            this.autoReloadTable();
         }
 
     });
