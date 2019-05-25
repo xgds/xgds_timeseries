@@ -261,7 +261,7 @@ $(function() {
                                     var datum = data_block[field_name];
                                     if (!_.isNull(last_time) && (the_time - last_time)/1000 > _this.channel_descriptions[field_name].get('interval')) {
                                         if (!_.isNull(data_array[data_array.length-1])) {
-                                            // data_array.push(null);
+                                            // data_array.push([null, null]);
                                             skip_count += 1;
                                         }
                                     }
@@ -355,8 +355,7 @@ $(function() {
                     this.insertDataIntoArray([timestamp, value], this.plot_data_array[index].data);
                 }
 
-                if ('renderPlots' in this)
-                    this.renderPlots();
+                app.vent.trigger("rerenderPlot:" + this.model_name);
             },
             subscribeToSSE: function() {
                 app.vent.on('timeSeriesSSE', function(data) {
@@ -512,6 +511,12 @@ $(function() {
                 }
             });
 
+            app.vent.on('rerenderPlot:' + this.model_name, function() {
+                if ('live' in app.options && app.options.live) {
+                    this.renderPlots();
+                }
+            }.bind(this));
+
         },
         setupModel: function() {
             if (_.isUndefined(this.model)) {
@@ -660,9 +665,8 @@ $(function() {
 
                 this.plot.draw();
             } else {
-                var plotOptions = this.plot.getOptions();
-                this.plot.setupGrid();
                 this.plot.setData(this.model.buildPlotDataArray());
+                this.plot.setupGrid();
                 this.plot.draw();
             }
             this.rendering = false;
