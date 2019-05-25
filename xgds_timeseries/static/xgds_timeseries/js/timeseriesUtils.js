@@ -243,27 +243,37 @@ $(function() {
                     data: this.postOptions,
                     type: 'POST',
                     success: $.proxy(function(data) {
+
                         if (_.isUndefined(data) || data.length === 0){
                             this.trigger('setMessage', "None found.");
                         } else {
                             this.trigger('clearMessage');
-                            var last_time = null;
-                            var skip_count = 0;
 
                             _.each(data, function(data_block) {
                                 var the_time = moment(data_block['timestamp']).valueOf();
                                 _.each(Object.keys(this.channel_descriptions), function(field_name, index, list) {
                                     var data_array = this.channel_descriptions[field_name].get('data');
                                     var datum = data_block[field_name];
-                                    if (!_.isNull(last_time) && (the_time - last_time)/1000 > this.channel_descriptions[field_name].get('interval')) {
-                                        if (!_.isNull(data_array[data_array.length-1])) {
-                                            // data_array.push([null, null]);
-                                            skip_count += 1;
-                                        }
-                                    }
+                                    if (data_array.length > 1 && the_time <= data_array[data_array.length - 1][0]) return;
                                     data_array.push([the_time, datum]);
                                 }.bind(this));
-                                last_time = the_time;
+                            }.bind(this));
+
+                            _.each(Object.keys(this.channel_descriptions), function(field_name, index, list) {
+                                let data_array = this.channel_descriptions[field_name].get('data');
+                                let new_data_array = [data_array[0]];
+                                for (let i = 1; i < data_array.length; i++) {
+                                    let current_time = data_array[i][0] / 1000.0;
+                                    let previous_time = data_array[i - 1][0] / 1000.0;
+                                    let interval = this.channel_descriptions[field_name].get('interval');
+                                    interval = 10; // TODO: change me!
+                                    if ((current_time - previous_time) > interval) {
+                                        // we need to insert a null here
+                                        new_data_array.push([null, null]);
+                                    }
+                                    new_data_array.push(data_array[i]);
+                                }
+                                this.channel_descriptions[field_name].set('data', new_data_array);
                             }.bind(this));
 
                             if ('flight_ids' in this.postOptions && this.postOptions['stateful'] == "true") {
