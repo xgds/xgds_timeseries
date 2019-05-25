@@ -311,6 +311,24 @@ $(function() {
                 }
                 return -1;
             },
+            insertDataIntoArray: function(data, array) {
+                let key = data[0];
+                for (var i = 0; i < (array.length - 1); i++) {
+                    let previous_key = array[i][0];
+                    let next_key = array[i + 1][0];
+
+                    if ((key == previous_key) || (key == next_key)) {
+                        console.log("Warning: data was not inserted because timestamp already exists");
+                        return;
+                    }
+
+                    if ((key > previous_key) && (key < next_key)) {
+                        array.splice(next_key, 0, data);
+                        return;
+                    }
+                }
+                console.log("Error: unable to insert data into array!");
+            },
             addDataToArray: function(channel, timestamp, value) {
                 if (!this.plot_data_array) {
                     this.buildPlotDataArray();
@@ -325,10 +343,20 @@ $(function() {
                 }
 
                 // only add the data IF it is a new sample (timestamp > the latest saved timestamp)
-                let length =  this.plot_data_array[index].data.length;
-                if (length == 0) return;
-                if (timestamp - this.plot_data_array[index].data[length - 1][0] >= 1.0)
+                let length = this.plot_data_array[index].data.length;
+                if (length == 0) {
+                    console.log("Warning: length was zero and therefore no data has been added");
+                    return;
+                }
+                
+                if (timestamp > this.plot_data_array[index].data[length - 1][0]) {
                     this.plot_data_array[index].data.push([timestamp, value]);
+                } else {
+                    this.insertDataIntoArray([timestamp, value], this.plot_data_array[index].data);
+                }
+
+                if ('renderPlots' in this)
+                    this.renderPlots();
             },
             subscribeToSSE: function() {
                 app.vent.on('timeSeriesSSE', function(data) {
@@ -337,7 +365,8 @@ $(function() {
                         if (key == "model_name" || key == "timestamp") continue;
                         this.addDataToArray(
                             key, 
-                            moment.utc(data.timestamp.substring(0, 23), "YYYY-MM-DDTHH:mm:ss.SSS").valueOf() / 1000.0, 
+                            // important note: this function needs timestamps in milliseconds!
+                            moment.utc(data.timestamp.substring(0, 23), "YYYY-MM-DDTHH:mm:ss.SSS").unix() * 1000.0, 
                             data[key]
                         );
                     }
