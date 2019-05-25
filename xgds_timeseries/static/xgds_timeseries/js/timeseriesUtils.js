@@ -118,17 +118,16 @@ $(function() {
                     this.loadData();
                 }
 
-                var _this = this;
                 this.listenTo(app.vent, 'updateTimeseriesTime:' + this.model_name, function(currentTime) {
-                    var index = _this.getPlotIndex(currentTime);
+                    var index = this.getPlotIndex(currentTime);
                     if (!_.isUndefined((index)) && index > -1){
-                        _this.cached_index = index;
+                        this.cached_index = index;
                     } else {
-                        _this.cached_index = undefined;
+                        this.cached_index = undefined;
                     }
-                    app.vent.trigger('updateTimeseriesValue:' + _this.model_name, _this.cached_index);
+                    app.vent.trigger('updateTimeseriesValue:' + this.model_name, this.cached_index);
 
-                });
+                }.bind(this));
 
                 this.subscribeToSSE();
             },
@@ -187,7 +186,6 @@ $(function() {
             },
             loadLastFlightData: function() {
                 // this only has to get called for stateful data, so that we at least have a pair of data values to draw a plot line.
-                var _this = this;
                 var options = Object.assign({}, this.postOptions);
                 var flight_end_unix = undefined;
 
@@ -213,14 +211,13 @@ $(function() {
                         } else {
                             this.trigger('clearMessage');
                             _.each(data, function(data_block) {
-                                var the_time = moment(data_block['timestamp']).valueOf();
-                                _.each(Object.keys(this.channel_descriptions), function(field_name, index, list){
-                                    var data_array = _this.channel_descriptions[field_name].get('data');
+                                _.each(Object.keys(this.channel_descriptions), function(field_name, index, list) {
+                                    var data_array = this.channel_descriptions[field_name].get('data');
                                     var datum = data_block[field_name];
                                     // we looked up this data to see what was the value at the end time, if we got data back then it is to be used for this end time.
                                     data_array.push([flight_end_unix, datum]);
-                                });
-                            }, this);
+                                }.bind(this));
+                            }.bind(this));
 
                             this.initialized = true;
                             app.vent.trigger('data:loaded', this.postOptions.model_name);
@@ -240,7 +237,6 @@ $(function() {
                 this.loadData();
             },
             loadData: function(){
-                var _this = this;
                 $.ajax({
                     url: '/timeseries/values/flight/downsample/json',
                     dataType: 'json',
@@ -256,23 +252,23 @@ $(function() {
 
                             _.each(data, function(data_block) {
                                 var the_time = moment(data_block['timestamp']).valueOf();
-                                _.each(Object.keys(this.channel_descriptions), function(field_name, index, list){
-                                    var data_array = _this.channel_descriptions[field_name].get('data');
+                                _.each(Object.keys(this.channel_descriptions), function(field_name, index, list) {
+                                    var data_array = this.channel_descriptions[field_name].get('data');
                                     var datum = data_block[field_name];
-                                    if (!_.isNull(last_time) && (the_time - last_time)/1000 > _this.channel_descriptions[field_name].get('interval')) {
+                                    if (!_.isNull(last_time) && (the_time - last_time)/1000 > this.channel_descriptions[field_name].get('interval')) {
                                         if (!_.isNull(data_array[data_array.length-1])) {
                                             // data_array.push([null, null]);
                                             skip_count += 1;
                                         }
                                     }
                                     data_array.push([the_time, datum]);
-                                });
+                                }.bind(this));
                                 last_time = the_time;
-                            }, this);
+                            }.bind(this));
 
                             if ('flight_ids' in this.postOptions && this.postOptions['stateful'] == "true") {
                                 // make sure we have the last data for the flight
-                                _this.loadLastFlightData();
+                                this.loadLastFlightData();
                             } else {
                                 this.initialized = true;
                                 playback.addListener(this.playback);
@@ -280,7 +276,7 @@ $(function() {
                             }
                         }
                     }, this),
-                    error: $.proxy(function(data){
+                    error: $.proxy(function(data) {
                         this.trigger('setMessage', "Search failed.");
                     }, this)
                 });
@@ -335,7 +331,7 @@ $(function() {
                     console.log("Warning: plot data array is undefined and therefore no data has been added");
                     return;
                 }
-                
+
                 let index = this.getIndexInPlotDataArray(channel);
                 if (index == -1) {
                     console.log("Warning: no channel exists for the provided input");
@@ -348,7 +344,7 @@ $(function() {
                     console.log("Warning: length was zero and therefore no data has been added");
                     return;
                 }
-                
+
                 if (timestamp > this.plot_data_array[index].data[length - 1][0]) {
                     this.plot_data_array[index].data.push([timestamp, value]);
                 } else {
@@ -363,9 +359,9 @@ $(function() {
                     for (let key in data) {
                         if (key == "model_name" || key == "timestamp") continue;
                         this.addDataToArray(
-                            key, 
+                            key,
                             // important note: this function needs timestamps in milliseconds!
-                            moment.utc(data.timestamp.substring(0, 23), "YYYY-MM-DDTHH:mm:ss.SSS").unix() * 1000.0, 
+                            moment.utc(data.timestamp.substring(0, 23), "YYYY-MM-DDTHH:mm:ss.SSS").unix() * 1000.0,
                             data[key]
                         );
                     }
@@ -385,7 +381,6 @@ $(function() {
                 }
 
                 if (shouldUpdate) {
-                    var context = this;
                     var sampleData = this.buildPlotDataArray()[0].data;
                     var currentTimeValue = currentTime.valueOf();
 
@@ -393,15 +388,15 @@ $(function() {
                         if (_.isNull(value)){
                             return -1;
                         }
-                        var delta = Math.abs(currentTimeValue - value[0])/1000;
-                        return delta < context.intervalSeconds;
-                    });
+                        var delta = Math.abs(currentTimeValue - value[0]) / 1000;
+                        return delta < this.intervalSeconds;
+                    }.bind(this));
 
                     if (foundIndex == -1) {
                         return undefined;
                     }
-                    return foundIndex;
-                    if (this.lastDataIndex !== foundIndex){
+
+                    if (this.lastDataIndex !== foundIndex) {
                         // now verify the actual time at that index
                         var testData = sampleData[foundIndex];
                         if (_.isUndefined(testData) || _.isNull(testData)) {
@@ -409,11 +404,10 @@ $(function() {
                         }
                         var testDiff = Math.abs((currentTime - testData[0])/1000)
                         if (testDiff > this.intervalSeconds) {
-                            console.log('BOO bad time ' + testDiff);
-                            //TODO find better time.  This may easily happen if we have data dropouts.
+                            console.log("Warning: could not find good time to navigate to.");
+                            // TODO find better time.  This may easily happen if we have data dropouts.
                             return undefined; // not sure what to do
                         }
-
                         this.lastDataIndex = foundIndex;
                         this.lastDataIndexTime = currentTime;
                     }
@@ -481,7 +475,6 @@ $(function() {
                 timezone: getTimeZone(),
                 reserveSpace: false
             },
-            //yaxes: [],
             legend: {
                 show: false
             }
@@ -502,17 +495,16 @@ $(function() {
                 this.plot = null;
             }
 
-            var _this = this;
             this.listenTo(app.vent, 'updateTimeseriesValue:' + this.model_name, function(index) {
                 if (!_.isUndefined((index)) && index > -1){
-                    _this.selectData(index);
+                    this.selectData(index);
                 } else {
-                    _this.clearData();
+                    this.clearData();
                 }
-            });
+            }.bind(this));
 
             app.vent.on('rerenderPlot:' + this.model_name, function() {
-                if ('live' in app.options && app.options.live) {
+                if ('live' in app.options && app.options.live && playback.playFlag) {
                     this.renderPlots();
                 }
             }.bind(this));
@@ -553,12 +545,10 @@ $(function() {
         drawTitle: function() {
             this.$el.find("#plotTitle").html('&nbsp;&nbsp;&nbsp;<strong>' + this.title + '</strong>')
         },
-
         drawLegendLabels: function() {
-            var context = this;
             var plotLegend = this.$el.find("#plotLegend");
             _.each(Object.keys(this.model.channel_descriptions), function(channel) {
-                var cd = context.model.channel_descriptions[channel];
+                var cd = this.model.channel_descriptions[channel];
                 var underChannel = channel.split(' ').join('_');
                 var content = '<div id="' + underChannel + 'legend_div" class="d-sm-inline-flex flex-row" style="min-width:180px;">';
                 content += '<label><span id="' + underChannel + '_label" style="color:' +
@@ -569,9 +559,8 @@ $(function() {
                 }
                 content += '</label></div>';
                 plotLegend.append(content);
-            });
+            }.bind(this));
         },
-
         clearData: function() {
             this.plot.unhighlight();
             _.each(Object.keys(this.model.channel_descriptions), function(key) {
@@ -579,23 +568,22 @@ $(function() {
             }, this);
         },
         selectData: function(index) {
-            if (this.plot != undefined){
+            if (this.plot != undefined) {
                 this.plot.unhighlight();
                 var time = null;
-                var context = this;
                 _.each(this.plot.getData(), function(plotData, i) {
                     var channel = plotData.channel;
                     var value = null;
                     if (!_.isUndefined(channel)) {
                         var dataAtIndex = plotData.data[index];
                         if (!_.isUndefined(dataAtIndex)) {
-                            context.plot.highlight(i, index);
+                            this.plot.highlight(i, index);
                             time = dataAtIndex[0];
                             value = dataAtIndex[1];
                         }
-                        context.updateDataValue(channel, value);
+                        this.updateDataValue(channel, value);
                     }
-                });
+                }.bind(this));
                 if (!_.isNull(time)) {
                     this.updateTimeValue(time);
                 }
@@ -620,13 +608,12 @@ $(function() {
             if (!_.isUndefined(this.model) && this.model.initialized){
                 this.renderPlots();
             } else {
-                var _this = this;
                 app.listenTo(app.vent, 'data:loaded', function(model_name) {
-                    if (model_name == _this.model_name){
-                        _this.setupModel();
-                        _this.renderPlots();
+                    if (model_name == this.model_name){
+                        this.setupModel();
+                        this.renderPlots();
                     }
-                });
+                }.bind(this));
             }
         },
         renderPlots: function() {
@@ -643,7 +630,6 @@ $(function() {
                 this.drawTitle();
 
                 this.plot = $.plot(plotDiv, this.model.buildPlotDataArray(), this.plotOptions);
-                var context = this;
                 // get the colors
                 var keys = Object.keys( this.model.channel_descriptions );
                 _.each(this.plot.getData(), function(data, index){
@@ -655,13 +641,13 @@ $(function() {
 
                 // hook up the click and hover
                 plotDiv.bind("plotclick", function (event, pos, item) {
-                    context.selectData(item.dataIndex);
-                });
+                    this.selectData(item.dataIndex);
+                }.bind(this));
                 plotDiv.bind("plothover", function (event, pos, item) {
-                    if (item != null){
-                        context.selectData(item.dataIndex);
+                    if (item != null) {
+                        this.selectData(item.dataIndex);
                     }
-                });
+                }.bind(this));
 
                 this.plot.draw();
             } else {
@@ -683,37 +669,32 @@ $(function() {
             }
 
             this.model_name = options.model_name;
-            
+
             this.title = options.title;
             // the model must be initialized in the app
             if (!_.isUndefined(app.plot_models_initialized) && app.plot_models_initialized){
                 this.model = app.plot_models[options.model_name];
             }
 
-            var _this = this;
             this.listenTo(app.vent, 'updateTimeseriesValue:' + this.model_name, function(index) {
                 // only change the time series if not in live or play flag is false
                 if ('live' in app.options && app.options.live && playback.playFlag) return;
                 if (!_.isUndefined((index)) && index > -1){
-                    _this.showData(index);
+                    this.showData(index);
                 } else {
-                    _this.clearData();
+                    this.clearData();
                 }
-            });
-
-
+            }.bind(this));
         },
         clearData: function() {
             var plot_data_array = this.model.buildPlotDataArray();
-            var _this = this;
             _.each(plot_data_array, function(channel_dict) {
                 var channel = channel_dict.channel;
-                _this.$el.find("#" + channel + 'value_value').html(BLANKS);
-            });
+                this.$el.find("#" + channel + 'value_value').html(BLANKS);
+            }.bind(this));
         },
         showData: function(index) {
             var plot_data_array = this.model.buildPlotDataArray();
-            var _this = this;
             _.each(plot_data_array, function(channel_dict) {
                 var values = channel_dict.data[index];
                 var channel = channel_dict.channel;
@@ -721,24 +702,23 @@ $(function() {
                 if (_.isNumber(print_value)){
                     print_value = print_value.toFixed(2);
                 }
-                _this.$el.find("#" + channel + 'value_value').html(print_value);
-            });
+                this.$el.find("#" + channel + 'value_value').html(print_value);
+            }.bind(this));
         },
         onAttach: function() {
             if (!_.isUndefined(this.model) && this.model.initialized){
                 this.setupTable();
             } else {
-                var _this = this;
                 app.listenTo(app.vent, 'data:loaded', function(model_name) {
-                    if (model_name == _this.model_name){
-                        _this.setupTable();
+                    if (model_name == this.model_name){
+                        this.setupTable();
                     }
-                });
+                }.bind(this));
             }
         },
         autoUpdateTable: function() {
             // events here are triggered by replayDataPlotsView
-            app.vent.on('timeSeriesSSE', 
+            app.vent.on('timeSeriesSSE',
             // data = time series model name, time and information
             function(data) {
                 // only respond if this message was intended for us
@@ -753,7 +733,7 @@ $(function() {
                 let clean_model_name = data.model_name.replace(/\./g, "_") + "-value-container";
 
                 for (let key in data) {
-                    // each container in the telemetry row file had an id of 
+                    // each container in the telemetry row file had an id of
                     // key + value_value
                     let container = $("#" + clean_model_name + " #" + key + "value_value");
                     if (container.length > 0) {
@@ -766,7 +746,7 @@ $(function() {
                                 container.html(n.toFixed(0));
                             }
                         }
-                    } 
+                    }
                 }
             }.bind(this));
         },
@@ -783,12 +763,11 @@ $(function() {
                 this.model = app.plot_models[this.model_name];
             }
 
-            var context = this;
             var append_to = this.$el.find('.plot-value-tbody');
             var content = '<tr>';
             var col_count = 0;
             _.each(Object.keys(this.model.channel_descriptions), function(channel) {
-                var cd = context.model.channel_descriptions[channel];
+                var cd = this.model.channel_descriptions[channel];
                 var underChannel = channel.split(' ').join('_');
 
                 content += '<td id="' + underChannel + 'value_label" ><strong>';
@@ -801,7 +780,7 @@ $(function() {
                 }
                 content += '</td>';
                 col_count += 2;
-            });
+            }.bind(this));
             content += '</tr>';
             append_to.append(content);
 
