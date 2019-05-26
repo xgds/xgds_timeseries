@@ -671,9 +671,17 @@ $(function() {
 
                 // hook up the click and hover
                 plotDiv.bind("plotclick", function (event, pos, item) {
+                    // if we are live, plot interactions are disabled!
+                    if ('live' in app.options && app.options.live && playback.playFlag) {
+                        return;
+                    }
                     this.selectData(item.dataIndex);
                 }.bind(this));
                 plotDiv.bind("plothover", function (event, pos, item) {
+                    // if we are live, plot hovering is disabled!
+                    if ('live' in app.options && app.options.live && playback.playFlag) {
+                        return;
+                    }
                     if (item != null) {
                         let time = moment(item.datapoint[0]).utc();
                         this.selectData(item.dataIndex);
