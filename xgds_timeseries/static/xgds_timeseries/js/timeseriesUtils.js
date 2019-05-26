@@ -565,11 +565,20 @@ $(function() {
                     cd.get('color') + '">' + cd.get('label') + ':</span><span id="' + underChannel + '_value">' +
                     BLANKS + '</span>';
                 if (cd.get('units') !== null) {
-                    content += '<span id="\' + underChannel + \'_units">&nbsp;' + cd.get('units') + '</span>';
+                    content += '<span id="' + underChannel + '_units">&nbsp;' + cd.get('units') + '</span>';
                 }
                 content += '</label></div>';
                 plotLegend.append(content);
             }.bind(this));
+
+            var underChannel = this.model.model_name.split('.').join('_') + "_current_time";
+            var content = '<div id="' + underChannel + '_legend_div" class="d-sm-inline-flex flex-row" style="min-width:180px;">';
+            content += '<label><span id="' + underChannel + '_label" style="color:' +
+                'red' + '"> </span><span id="' + underChannel + '_value">' +
+                BLANKS + '</span>';
+            content += '</label></div>';
+            plotLegend.append(content);
+
         },
         clearData: function() {
             this.plot.unhighlight();
@@ -594,15 +603,15 @@ $(function() {
                         this.updateDataValue(channel, value);
                     }
                 }.bind(this));
-                if (!_.isNull(time)) {
-                    this.updateTimeValue(time);
-                }
+                // if (!_.isNull(time)) {
+                //     this.updateTimeValue(time);
+                // }
             }
         },
-        updateDataValue: function(label, value){
+        updateDataValue: function(label, value) {
             // show the value from the plot below the plot.
             var labelValue = ('#' + label + '_value');
-            var labelValue = labelValue.split(' ').join('_');
+            labelValue = labelValue.split(' ').join('_');
             if (value != null && value != undefined){
                 value = value.toFixed(2);
                 this.$el.find(labelValue).text(value);
@@ -610,8 +619,19 @@ $(function() {
                 this.$el.find(labelValue).text(BLANKS);
             }
         },
-        updateTimeValue: function(newTime){
-            //TODO update the time for the slider maybe
+        updateTimeValue: function(newTime) {
+            // update the time value in the legend
+            var label = "#" + this.model.model_name.split('.').join('_') + "_current_time_label";
+            this.$el.find(label).text('Time:');
+            var labelValue = "#" + this.model.model_name.split('.').join('_') + "_current_time_value";
+            this.$el.find(labelValue).text(newTime.format('HH:mm:ss MM/DD/YY'));
+        },
+        removeTimeValue: function() {
+            // remove the time value from the legend
+            var label = "#" + this.model.model_name.split('.').join('_') + "_current_time_label";
+            this.$el.find(label).text('');
+            var labelValue = "#" + this.model.model_name.split('.').join('_') + "_current_time_value";
+            this.$el.find(labelValue).text('');
         },
         rendering: false,
         onAttach: function() {
@@ -655,7 +675,11 @@ $(function() {
                 }.bind(this));
                 plotDiv.bind("plothover", function (event, pos, item) {
                     if (item != null) {
+                        let time = moment(item.datapoint[0]).utc();
                         this.selectData(item.dataIndex);
+                        this.updateTimeValue(time);
+                    } else {
+                        this.removeTimeValue();
                     }
                 }.bind(this));
 
