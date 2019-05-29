@@ -516,6 +516,7 @@ $(function() {
             app.vent.on('rerenderPlot:' + this.model_name, function() {
                 if ('live' in app.options && app.options.live && playback.playFlag) {
                     this.renderPlots();
+                    this.selectData(-1); // show the most recent data
                 }
             }.bind(this));
 
@@ -589,12 +590,15 @@ $(function() {
         selectData: function(index) {
             if (this.plot != undefined) {
                 this.plot.unhighlight();
-                var time = null;
                 _.each(this.plot.getData(), function(plotData, i) {
                     var channel = plotData.channel;
                     var value = null;
                     if (!_.isUndefined(channel)) {
-                        var dataAtIndex = plotData.data[index];
+                        if (index != -1) {
+                            var dataAtIndex = plotData.data[index];
+                        } else {
+                            var dataAtIndex = plotData.data[plotData.data.length - 1];
+                        }
                         if (!_.isUndefined(dataAtIndex)) {
                             this.plot.highlight(i, index);
                             time = dataAtIndex[0];
@@ -603,9 +607,6 @@ $(function() {
                         this.updateDataValue(channel, value);
                     }
                 }.bind(this));
-                // if (!_.isNull(time)) {
-                //     this.updateTimeValue(time);
-                // }
             }
         },
         updateDataValue: function(label, value) {
